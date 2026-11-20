@@ -1,0 +1,36 @@
+# Environment variables & API keys (CRITICAL)
+.env
+.env.local
+.env.*.local
+
+# Python virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Streamlit local configuration & secrets
+.streamlit/secrets.toml
+
+# VS Code workspace settings (keep if you want shared settings, ignore local caches)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Testing & linting caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Windows OS thumbnails & system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
