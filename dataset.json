@@ -16,7 +16,7 @@
      "personality": "Gossipy, Charming, Easily offended"},
     {"name": "Biscuit", "breed": "Ragdoll", "role": "Stray", "zodiac_sign": "Libra",
      "personality": "Sleepy, Cuddly, Surprisingly sharp"}
-  ],
+  ],                    
   "weapons": [
     {"name": "Giant Yarn Ball", "description": "a tangled ball of crimson yarn the size of a beach ball",
      "material": ["wool", "cotton"]},

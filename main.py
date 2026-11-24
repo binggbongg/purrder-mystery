@@ -29,12 +29,8 @@ HELP = """commands (they mirror the tabs in the design):
 
 def show_scene(s):
     print(f"\n{BOLD}{RED}POLICE INCIDENT REPORT{RESET}\n{LINE}")
-    print(f"{BOLD}Overview:{RESET}\n{s.story}\n")
-    print(LINE)
-    print(f"{BOLD}{'CLUES & EVIDENCE'.center(60)}{RESET}\n")
-    for i, e in enumerate(s.evidence):
-        last = i == len(s.evidence) - 1          # the always-true confirmed clue, in red
-        print(f"  \u2022 {RED if last else ''}{e}{RESET if last else ''}")
+    print(f"{BOLD}Overview:{RESET}\n{s.story.strip()}\n")
+    print(f"{RED}{s.confirmed_clue.text}{RESET}")
     print(LINE)
     print(f"{BOLD}TO-DO: Fill Out Missing Information{RESET}  (use /accuse when you're ready)")
     print(f"  Suspect:  {', '.join(c.name for c in s.cats)}")
@@ -94,7 +90,6 @@ def start_case(client, dataset):
     session.story = safe_complete(client, prompts.GM_SYSTEM,
                                   [{"role": "user", "content": prompts.story_prompt(session)}],
                                   session.solution, max_tokens=1200) or "A mystery awaits, detective!"
-    session.evidence = generate_evidence(client, session)   # AI-worded, Python-verified
     show_scene(session)
     return session
 
@@ -102,7 +97,7 @@ def start_case(client, dataset):
 def main():
     load_dotenv()
     client = get_client()
-    dataset = Dataset.load(os.getenv("DATASET_PATH", "mockup_dataset.json"))
+    dataset = Dataset.load(os.getenv("DATASET_PATH", "dataset.json"))
     print("\n=== PURRDER MYSTERY ===")
     if type(client).__name__ == "MockClient":
         print("[OFFLINE MOCK MODE: no API calls, no tokens used]")
