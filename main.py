@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 from models import Dataset
 from game import new_game, pick_clue, next_hint, evaluate_accusation
 from guard import looks_like_injection, safe_complete, is_stonewall, SAFE_DEFLECTION
-from casefile import generate_evidence
 from llm import get_client
 import prompts
 
@@ -14,12 +13,12 @@ RESET = "\033[0m" if sys.stdout.isatty() else ""
 LINE = "-" * 60
 
 HELP = """commands (they mirror the tabs in the design):
-  /scene                 CRIME SCENE: the report, evidence and confirmed clue
+  /scene                 CRIME SCENE: the report and confirmed clue
   /suspects              SUSPECTS: list everyone
   /interrogate <name>    open that suspect's page (profile, alibi, transcript), then just type questions
   /transcript            re-read the current suspect's conversation
-  /weapons               WEAPONS: details and materials
-  /locations             LOCATIONS: details and settings
+  /weapons               WEAPONS: details
+  /locations             LOCATIONS: details
   /clues                 every clue you've uncovered so far
   /hint                  get a hint (3 levels, never the answer)
   /accuse                SUBMIT REPORT: name the suspect, weapon and location
@@ -42,20 +41,20 @@ def show_scene(s):
 def show_suspects(s):
     print()
     for i, c in enumerate(s.cats, 1):
-        print(f"{i}. {c.name} - {c.role} ({c.breed})")
+        print(f"{i}. {c.name} - {c.archetype} ({c.breed})")
     print()
 
 
 def show_weapons(s):
     print(f"\n{BOLD}{RED}POSSIBLE WEAPONS{RESET}\n{LINE}")
     for i, w in enumerate(s.weapons, 1):
-        print(f"Weapon {i}: {BOLD}{w.name}{RESET}\n  {w.description}\n  Made of: {', '.join(w.material)}\n")
+        print(f"Weapon {i}: {BOLD}{w.name}{RESET}\n  {w.description}\n")
 
 
 def show_locations(s):
     print(f"\n{BOLD}{RED}POSSIBLE LOCATIONS{RESET}\n{LINE}")
     for i, l in enumerate(s.locations, 1):
-        print(f"Location {i}: {BOLD}{l.name}{RESET}\n  {l.description}\n  {l.setting.capitalize()}\n")
+        print(f"Location {i}: {BOLD}{l.name}{RESET}\n  {l.description}\n")
 
 
 def show_transcript(s, cat):
@@ -70,8 +69,7 @@ def show_transcript(s, cat):
 
 def show_suspect_page(s, cat):
     print(f"\n{LINE}")
-    print(f"Name:        {cat.name}\nBreed:       {cat.breed}\nRole/Title:  {cat.role}")
-    print(f"Zodiac Sign: {cat.zodiac_sign}\nPersonality: {cat.personality}")
+    print(f"Name:      {cat.name}\nBreed:     {cat.breed}\nArchetype: {cat.archetype}")
     print(f"{LINE}\n{BOLD}Alibi:{RESET} {cat.alibi}")
     show_transcript(s, cat)
     print("Type your questions below.\n")

@@ -1,32 +1,24 @@
 import json
 from typing import Literal
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 # dataset classes
 class Suspect(BaseModel):
     name: str
     breed: str
-    role: str
-    zodiac_sign: str
-    personality: str
+    archetype: str
+    voice_notes: str
 
 
 class Weapon(BaseModel):
     name: str
     description: str
-    material: list[str]
-
-    @field_validator("material")
-    @classmethod
-    def _lower(cls, v):
-        return [m.strip().lower() for m in v if m.strip()]
 
 
 class Location(BaseModel):
     name: str
     description: str
-    setting: Literal["indoors", "outdoors"]
 
 
 class Dataset(BaseModel):
@@ -49,7 +41,7 @@ class Dataset(BaseModel):
             return cls.model_validate(json.load(f))
 
 
-#round classes
+# round classes
 class Clue(BaseModel):
     id: str
     kind: Literal["suspect", "weapon", "location"]
@@ -63,9 +55,9 @@ class Clue(BaseModel):
 
 class ConfirmedClue(BaseModel):
     """The one always-true head-start clue shown in red on the crime scene page."""
-    kind: Literal["material", "setting", "suspect"]
+    kind: Literal["suspect", "weapon", "location"]
     text: str
-    key: str = ""                        # the word a rewrite must keep (material / setting / name)
+    key: str = ""                        # the word a rewrite must keep
 
 
 class Cat(Suspect):
@@ -88,7 +80,7 @@ class GameSession(BaseModel):
     confirmed_clue: ConfirmedClue
     scene_clues: list[Clue] = Field(default_factory=list)
     story: str = ""
-    evidence: list[str] = Field(default_factory=list)   # AI-written "Clues & Evidence" bullets
+    evidence: list[str] = Field(default_factory=list)
     seed: int = 0
     discovered_clue_ids: set[str] = Field(default_factory=set)
     hints_used: int = 0

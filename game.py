@@ -3,15 +3,15 @@ import random
 from models import Dataset, Cat, Clue, ConfirmedClue, Solution, GameSession, Evaluation
 
 VICTIMS = [
-    "Lord Fluffington, the manor's prize goldfish",
-    "Sir Waddles, the beloved garden duck",
-    "Madame Pom-Pom, the champion show hamster",
+    "Goldie, the household's prized goldfish",
+    "Pipit, the neighborhood's favorite pet maya bird",
+    "Mochi, the pampered show guinea pig",
 ]
 
 ALIBI_TEMPLATES = [
-    "I was in the {L} all evening, minding my own business.",
-    "I spent the whole night in the {L}. Ask anyone.",
-    "I never left the {L} once. Not even for a snack.",
+    "I was hanging out at the {L} all evening, minding my own business.",
+    "I spent the whole night near the {L}. Ask anyone.",
+    "I never left the {L} once—not even for merienda.",
 ]
 
 GENERIC = {
@@ -21,20 +21,33 @@ GENERIC = {
 }
 
 
-def _confirmed_clue(rng, weapons, locations, cats, sol) -> ConfirmedClue:
-    """one always-true clue that narrows things down but never names the answer."""
-    w = next(x for x in weapons if x.name == sol.weapon)
-    l = next(x for x in locations if x.name == sol.location)
-    options = []
-    for m in w.material:                              # shared by 2-3 of the 4 weapons
-        if 2 <= sum(1 for x in weapons if m in x.material) <= 3:
-            options.append(ConfirmedClue(kind="material", key=m,
-                                         text=f"The murder weapon is made, at least partly, of {m}."))
-    if 2 <= sum(1 for x in locations if x.setting == l.setting) <= 3:
-        options.append(ConfirmedClue(kind="setting", key=l.setting,
-                                         text=f"The crime took place {l.setting}."))
+def _confirmed_clue(rng, weapons, locations, cats, sol, scene_clues: list[Clue]) -> ConfirmedClue:
+    """One always-true head-start clue that rules out an innocent option without repeating scene clues."""
+    already_eliminated = {c.eliminates for c in scene_clues}
+    options: list[ConfirmedClue] = []
+
+    for c in cats:
+        if c != sol.culprit and c not in already_eliminated:
+            options.append(ConfirmedClue(
+                kind="suspect", key=c,
+                text=f"{c} is definitely NOT the culprit."
+            ))
+    for w in weapons:
+        if w.name != sol.weapon and w.name not in already_eliminated:
+            options.append(ConfirmedClue(
+                kind="weapon", key=w.name,
+                text=f"The {w.name} was definitely NOT the murder weapon."
+            ))
+    for l in locations:
+        if l.name != sol.location and l.name not in already_eliminated:
+            options.append(ConfirmedClue(
+                kind="location", key=l.name,
+                text=f"The crime definitely did NOT take place at the {l.name}."
+            ))
+
     if options:
         return rng.choice(options)
+
     innocent = rng.choice([c for c in cats if c != sol.culprit])
     return ConfirmedClue(kind="suspect", key=innocent, text=f"{innocent} is definitely NOT the culprit.")
 
@@ -57,25 +70,25 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
     cats = [Cat(**p.model_dump(),
                 alibi=rng.choice(ALIBI_TEMPLATES).format(L=alibi_loc[p.name])) for p in profiles]
 
-    # elimination clues: each innocent suspect / weapon / location is ruled out once.
+    # Elimination clues: each innocent suspect / weapon / location is ruled out once.
     pending = []   # (kind, eliminates, cat_text, scene_text, specific)
     for n in names:
         if n != culprit:
             L = alibi_loc[n]
             pending.append(("suspect", n,
-                            f"I saw {n} in the {L} the whole evening, so it can't have been them.",
-                            f"Pawprints and a warm cushion show {n} spent the evening in the {L}.",
+                            f"I saw {n} over at the {L} the whole evening, so it couldn't have been them.",
+                            f"Pawprints and shed fur show {n} spent the evening at the {L}.",
                             [n.lower(), n.split()[-1].lower()]))
     for w in weapons:
         if w.name != solution.weapon:
             L = rng.choice(safe_locs)
             pending.append(("weapon", w.name,
-                            f"The {w.name} was still sitting in the {L}, perfectly untouched.",
-                            f"The {w.name} was found untouched in the {L}.",
+                            f"The {w.name} was still sitting by the {L}, completely untouched.",
+                            f"The {w.name} was found untouched at the {L}.",
                             [w.name.lower()]))
     for L in safe_locs:
         pending.append(("location", L,
-                        f"I walked through the {L} at dusk and nothing was out of place. Spotless.",
+                        f"I passed by the {L} earlier and nothing was out of place—completely spotless.",
                         f"The {L} was spotless, with no sign of trouble.",
                         [L.lower()]))
 
@@ -96,9 +109,11 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
             c.holder, i = rr[i % 4], i + 1
         next(cat for cat in cats if cat.name == c.holder).clues.append(c)
 
+    confirmed = _confirmed_clue(rng, weapons, locations, names, solution, scene)
+
     return GameSession(
         victim=rng.choice(VICTIMS), cats=cats, weapons=weapons, locations=locations,
-        solution=solution, confirmed_clue=_confirmed_clue(rng, weapons, locations, names, solution),
+        solution=solution, confirmed_clue=confirmed,
         scene_clues=scene, seed=seed, discovered_clue_ids=scene_ids)
 
 
