@@ -1,0 +1,30 @@
+{
+  "suspects": [
+    {"name": "Miming","breed": "Calico","archetype": "dramatic gossip","voice_notes": "tsismosa neighborhood-aunt energy, says 'Naku!' and 'Ay grabe!', whispers 'wag mo sabihin kahit kanino ha' before sharing, tail flicks when excited"},
+    {"name": "Whitey","breed": "White puspin","archetype": "pompous aristocrat","voice_notes": "acts like he owns the whole barangay, calls the player 'my dear detective', sniffs 'Hmp' when doubted, grooms his spotless fur when he feels cornered"},
+    {"name": "Choco", "breed": "Brown tabby","archetype": "nervous and chatty","voice_notes": "over-explains, stammers 'ah, eh, kasi...', babbles when worried, kneads the air when anxious"},
+    {"name": "Blackie","breed": "Black puspin", "archetype": "cold and mysterious", "voice_notes": "short sentences, often answers a question with a question, stares without blinking, only drops a Tagalog word when it matters"},
+    {"name": "Pandesal","breed": "Cream Persian-mix","archetype": "sweet but forgetful","voice_notes": "warm and friendly, calls the player 'ate' or 'kuya', purrs mid-sentence, loses their train of thought, gets distracted by anything that smells like bread"},
+    {"name": "Tigre","breed": "Orange puspin","archetype": "grumpy veteran", "voice_notes": "blunt barangay-tanod energy, patrols the alley, complains about everything, hisses at the word 'ligo' (bath)"}
+  ],
+  "weapons": [
+    {"name": "Tsinelas", "description": "A rubber slipper, flung with unmatched mom-level accuracy"},
+    {"name": "Walis tambo", "description": "A soft broom with a few bristles missing"},
+    {"name": "Kawali", "description": "A heavy frying pan, still warm"},
+    {"name": "Sandok", "description": "A wooden ladle with a suspicious dent"},
+    {"name": "Paypay", "description": "A woven hand fan, torn at one edge"},
+    {"name": "Kandila", "description": "A candle stub, still smelling of smoke"},
+    {"name": "Laser pointer", "description": "Its little red dot is still blinking"},
+    {"name": "Scratching post", "description": "Shredded down one side"}
+  ],
+  "locations": [
+    {"name": "Sari-sari store", "description": "Shelves of candy and canned goods, with a cat-sized gap on the counter"},
+    {"name": "Kusina", "description": "The kitchen, smelling of garlic rice and burnt toast"},
+    {"name": "Garden", "description": "Moonlit, with muddy paw prints"},
+    {"name": "Bubong", "description": "The rooftop, warm tin and a view of the whole street"},
+    {"name": "Sala", "description": "A living room where the sofa is still covered in plastic"},
+    {"name": "Jeepney", "description": "Red with yellow trim, chipped paint, has been tambay for a year"},
+    {"name": "Cat tree", "description": "Three tiers, one carpeted perch scratched bare"},
+    {"name": "Sunny windowsill", "description": "The best seat in the house"}
+  ]
+}
