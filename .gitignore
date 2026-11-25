@@ -34,3 +34,15 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
+
+# macOS system files (in case a teammate uses a Mac)
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Jupyter / Scratchpad notebooks (if testing prompts locally)
+.ipynb_checkpoints/
+
+# Local logs & temporary test dumps
+*.log
+*.tmp
