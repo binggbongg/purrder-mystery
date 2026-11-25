@@ -8,12 +8,14 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+icon_path = Path(__file__).parent / "assets" / "icons" / "meowslock.svg"
+
 from ui.components import grid_drawer, navbar, tab_crime_scene, tab_locations, tab_suspects, tab_weapons
 from ui.mock_data import get_mock_session
 
 st.set_page_config(
     page_title="Purrder Mystery",
-    page_icon="🐾",
+    page_icon=str(icon_path),
     layout="centered",
     initial_sidebar_state="collapsed",
 )
