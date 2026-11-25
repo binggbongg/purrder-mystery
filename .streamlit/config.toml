@@ -1,0 +1,10 @@
+[theme]
+base = "light"
+primaryColor = "#C60000"               # Red accents / focus
+backgroundColor = "#FFF6F0"            # Page cream background
+secondaryBackgroundColor = "#F7DEC2"   # Nav beige / widget fills
+textColor = "#000000"
+font = "sans serif"                    # Real fonts (Jost, Pixelify Sans) are loaded in main.css
+
+[client]
+toolbarMode = "minimal"
