@@ -1,6 +1,8 @@
 """Deduction Grid (Murdle style).
 
 The player taps a square to cycle:  blank -> X (ruled out) -> dot (confirmed) -> blank.
+When a square is confirmed, blank squares in its row and column (same block) show a faded
+automatic X. Those are derived, not stored, so they disappear if the dot is removed.
 Marks live in st.session_state.grid_marks, so they survive tab switches and reruns.
 
 Icons come from the dataset: each suspect / weapon / location may have an `icon`
@@ -22,7 +24,8 @@ from ui.components._utils import esc, md
 ICON_DIR = Path(__file__).resolve().parent.parent / "assets" / "icons"
 IMAGE_EXT = re.compile(r"\.(png|jpe?g|gif|svg|webp)$", re.I)
 
-MARKS = ["", "✕", "●"]          # state 0 / 1 / 2
+MARKS = ["", "✕", "●", "✕"]     # 0 blank, 1 X (user), 2 dot (confirmed), 3 X (automatic - never stored)
+USER_STATES = 3                  # a tap cycles through states 0, 1, 2 only
 N = 4                            # items per category (models.py enforces exactly 4)
 BLANK = "\u200b"                 # zero-width space: Streamlit needs a non-empty button label
 
@@ -54,7 +57,7 @@ def _icon_html(item) -> str:
 # ---------------------------------------------------------------- state
 def _cycle(pair: str) -> None:
     marks = st.session_state.grid_marks
-    marks[pair] = (marks.get(pair, 0) + 1) % len(MARKS)
+    marks[pair] = (marks.get(pair, 0) + 1) % USER_STATES
 
 
 def _reset() -> None:
@@ -77,17 +80,34 @@ def _edges(r: int, c: int, block: str) -> list[str]:
     return edges
 
 
-def _cell(block: str, r: int, c: int, row_name: str, col_name: str) -> None:
-    pair = f"{block}:{row_name}|{col_name}"
-    state = st.session_state.grid_marks.get(pair, 0)
+def _pair(block: str, row_name: str, col_name: str) -> str:
+    return f"{block}:{row_name}|{col_name}"
+
+
+def _auto_ruled_out(block, row_name, col_name, row_names, col_names) -> bool:
+    """True when another square in this square's row or column (same block) is confirmed."""
+    marks = st.session_state.grid_marks
+    in_row = any(marks.get(_pair(block, row_name, c)) == 2 for c in col_names if c != col_name)
+    in_col = any(marks.get(_pair(block, r, col_name)) == 2 for r in row_names if r != row_name)
+    return in_row or in_col
+
+
+def _cell(block, r, c, row_name, col_name, row_names, col_names) -> None:
+    pair = _pair(block, row_name, col_name)
+    stored = st.session_state.grid_marks.get(pair, 0)
+    # Automatic X: only on squares the user left blank. It is derived on every run (not stored),
+    # so it vanishes by itself when the confirmed dot is removed.
+    auto = stored == 0 and _auto_ruled_out(block, row_name, col_name, row_names, col_names)
+    state = 3 if auto else stored
     # The key carries the mark state + edge flags so CSS can colour / outline each square.
     key = f"gc_s{state}_{block}_{r}{c}" + "".join(f"_e{e}" for e in _edges(r, c, block))
+    tip = f"{row_name} × {col_name}" + (" (ruled out automatically)" if auto else "")
     st.button(
         MARKS[state] or BLANK,
         key=key,
         on_click=_cycle,
         args=(pair,),
-        help=f"{row_name} × {col_name}",
+        help=tip,
         use_container_width=True,
     )
 
@@ -101,6 +121,9 @@ def render(session=None):
     cats = session.cats[:N]
     weapons = session.weapons[:N]
     locs = session.locations[:N]
+    weapon_names = [w.name for w in weapons]
+    cat_names = [c.name for c in cats]
+    loc_names = [l.name for l in locs]
 
     with st.container(key="grid_panel"):
         with st.container(key="paper_outer_grid"):
@@ -139,10 +162,10 @@ def render(session=None):
                                 md(_icon_html(weapon))
                             for c, cat in enumerate(cats):
                                 with cols[1 + c]:
-                                    _cell("ws", r, c, weapon.name, cat.name)
+                                    _cell("ws", r, c, weapon.name, cat.name, weapon_names, cat_names)
                             for c, loc in enumerate(locs):
                                 with cols[1 + N + c]:
-                                    _cell("wl", r, c, weapon.name, loc.name)
+                                    _cell("wl", r, c, weapon.name, loc.name, weapon_names, loc_names)
 
                     # --- location rows: [location icon | location x suspects | (legend)]
                     with st.container(key="grid_sec_l"):
@@ -154,6 +177,7 @@ def render(session=None):
                             <div><span class="lg-box"></span> not checked</div>
                             <div><span class="lg-box">✕</span> ruled out</div>
                             <div><span class="lg-box">●</span> confirmed</div>
+                            <div><span class="lg-box lg-auto">✕</span> auto ruled out</div>
                             </div>
                             """
                         )
@@ -163,7 +187,7 @@ def render(session=None):
                                 md(_icon_html(loc_row))
                             for c, cat in enumerate(cats):
                                 with cols[1 + c]:
-                                    _cell("ls", r, c, loc_row.name, cat.name)
+                                    _cell("ls", r, c, loc_row.name, cat.name, loc_names, cat_names)
 
                 btn_a, btn_b, _ = st.columns([1.3, 1.6, 3], gap="small")
                 btn_a.button("Clear grid", key="grid_reset", on_click=_reset, use_container_width=True)

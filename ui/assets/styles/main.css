@@ -396,10 +396,10 @@ div[data-baseweb="popover"] li[aria-selected="true"] {
 /* ---------- Suspects: transcript ---------- */
 .transcript-box {
     border-top: 1.5px solid var(--text-black);
-    height: 290px;
+    height: 320px;
     overflow-y: auto;
     display: flex;
-    flex-direction: column-reverse;   /* keeps the newest message in view */
+    /*flex-direction: column-reverse; */   /* keeps the newest message in view */
     padding: 0.6rem 1.1rem;
     scrollbar-width: thin;
     scrollbar-color: var(--suspect-yellow) #DADADA;
@@ -407,7 +407,13 @@ div[data-baseweb="popover"] li[aria-selected="true"] {
 .transcript-box::-webkit-scrollbar { width: 9px; }
 .transcript-box::-webkit-scrollbar-track { background: #DADADA; border-radius: 6px; }
 .transcript-box::-webkit-scrollbar-thumb { background: var(--suspect-yellow); border-radius: 6px; }
-.transcript-inner { display: flex; flex-direction: column; gap: 1.1rem; }
+.transcript-inner { 
+    display: flex; 
+    flex-direction: column;
+    gap: 1.1rem;
+    width: 100%;
+    height: auto;
+}
 .transcript-title { text-align: center; font-size: 1.05rem; padding-top: 0.2rem; }
 .bubble-user, .bubble-cat {
     border: 1.5px solid var(--text-black);
@@ -436,6 +442,7 @@ div[data-baseweb="popover"] li[aria-selected="true"] {
     border-top: 1.5px solid var(--text-black);
     border-radius: 0;
     padding: 0.8rem 1rem;
+    margin-top: 0 !important;
 }
 .st-key-paper_inner_flush div[data-baseweb="input"] {
     background-color: var(--suspect-bubble) !important;
