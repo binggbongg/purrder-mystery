@@ -393,13 +393,13 @@ div[data-baseweb="popover"] li[aria-selected="true"] {
 .alibi-box { border-top: 1.5px solid var(--text-black); padding: 0.55rem 0.8rem 0.7rem 0.8rem; }
 .alibi-text { margin: 0.15rem 0 0 1.6rem !important; }
 
-/* ---------- Suspects: transcript ---------- */
+/* ---------- Suspects: transcript v2 ---------- */
 .transcript-box {
+    box-sizing: border-box;
     border-top: 1.5px solid var(--text-black);
     height: 320px;
     overflow-y: auto;
     display: flex;
-    /*flex-direction: column-reverse; */   /* keeps the newest message in view */
     padding: 0.6rem 1.1rem;
     scrollbar-width: thin;
     scrollbar-color: var(--suspect-yellow) #DADADA;
@@ -407,14 +407,35 @@ div[data-baseweb="popover"] li[aria-selected="true"] {
 .transcript-box::-webkit-scrollbar { width: 9px; }
 .transcript-box::-webkit-scrollbar-track { background: #DADADA; border-radius: 6px; }
 .transcript-box::-webkit-scrollbar-thumb { background: var(--suspect-yellow); border-radius: 6px; }
-.transcript-inner { 
-    display: flex; 
+.transcript-inner {
+    display: flex;
     flex-direction: column;
     gap: 1.1rem;
     width: 100%;
     height: auto;
+    padding-bottom: 0.5rem;
 }
 .transcript-title { text-align: center; font-size: 1.05rem; padding-top: 0.2rem; }
+
+
+/* ---------- Suspects: question input bar v2 ---------- */
+.st-key-paper_inner_flush [data-testid="stElementContainer"],
+.st-key-paper_inner_flush [data-testid="stMarkdownContainer"] {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.st-key-paper_inner_flush [data-testid="stForm"] {
+    position: relative;
+    z-index: 2;
+    background-color: var(--paper-offwhite) !important;
+    border: none !important;
+    border-top: 1.5px solid var(--text-black) !important;
+    border-radius: 0 !important;
+    padding: 0.8rem 1rem !important;
+    margin-top: 0 !important;
+}
+
 .bubble-user, .bubble-cat {
     border: 1.5px solid var(--text-black);
     padding: 0.7rem 1.1rem;
