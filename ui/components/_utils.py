@@ -3,6 +3,36 @@ import html
 
 import streamlit as st
 
+UI_EXTRAS = {
+    "suspects": {
+        "Miming": {"role": "Barangay Chismosa", "zodiac": "Gemini"},
+        "Whitey": {"role": "Estate Aristocrat", "zodiac": "Leo"},
+        "Choco": {"role": "Alley Runner", "zodiac": "Virgo"},
+        "Blackie": {"role": "Night Watchcat", "zodiac": "Scorpio"},
+        "Pandesal": {"role": "Bakery Regular", "zodiac": "Pisces"},
+        "Tigre": {"role": "Barangay Tanod", "zodiac": "Aries"},
+    },
+    "weapons": {
+        "Tsinelas": {"made_of": "Rubber, Mom-level accuracy"},
+        "Walis tambo": {"made_of": "Tiger grass, Rattan"},
+        "Kawali": {"made_of": "Cast iron, Residual heat"},
+        "Sandok": {"made_of": "Hardwood, Suspicious dent"},
+        "Paypay": {"made_of": "Woven buri palm"},
+        "Kandila": {"made_of": "Wax, Lingering smoke"},
+        "Laser pointer": {"made_of": "Metal, Endless temptation"},
+        "Scratching post": {"made_of": "Sisal rope, Attitude"},
+    },
+    "locations": {
+        "Sari-sari store": {"setting": "Outdoors"},
+        "Kusina": {"setting": "Indoors"},
+        "Garden": {"setting": "Outdoors"},
+        "Bubong": {"setting": "Outdoors"},
+        "Sala": {"setting": "Indoors"},
+        "Jeepney": {"setting": "Outdoors"},
+        "Cat tree": {"setting": "Indoors"},
+        "Sunny windowsill": {"setting": "Indoors"},
+    },
+}
 
 def esc(text) -> str:
     """Escape user / data supplied text before putting it inside HTML."""

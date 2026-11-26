@@ -6,7 +6,7 @@ import streamlit as st
 from models import GameSession
 
 from ui.components._utils import esc, md
-from ui.mock_data import UI_EXTRAS
+from ui.components._utils import UI_EXTRAS
 
 HEIGHT_MARKS = ["5'6\"", "", "5'0\"", "", "4'6\"", "", "4'0\"", "", "3'6\"", "", "3'0\"", ""]
 
