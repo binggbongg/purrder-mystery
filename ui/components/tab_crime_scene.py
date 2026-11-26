@@ -1,3 +1,6 @@
+from game import evaluate_accusation
+from guard import safe_complete
+import prompts
 import streamlit as st
 from models import GameSession
 
@@ -19,7 +22,7 @@ def _field_row(label: str, placeholder: str, options: list[str], key: str):
         )
 
 
-def render(session: GameSession):
+def render(session: GameSession, client):
     with st.container(key="paper_outer_scene"):
         with st.container(key="paper_inner_scene"):
             md(
@@ -27,7 +30,7 @@ def render(session: GameSession):
                 <div class="report-title">Police Incident Report</div>
                 <hr class="section-divider" />
                 <div class="label-heading">Overview:</div>
-                <p class="desc-text" style="margin:0.2rem 0 0.8rem 0;">{esc(session.story)}</p>
+                <p class="desc-text" style="margin:0.2rem 0 0.8rem 0; white-space: pre-line;">{esc(session.story)}</p>
                 <p class="confirmed-clue">{esc(session.confirmed_clue.text)}</p>
                 <hr class="section-divider" style="margin-top:1.6rem;" />
                 <div class="todo-title">TO-DO: Fill Out Missing Information</div>
@@ -60,9 +63,25 @@ def render(session: GameSession):
 
     if submitted:
         if not (suspect and weapon and location):
-            st.warning("Fill out Suspect, Weapon, and Location before submitting your report.")
+            st.warning("Fill out Suspect, Weapon, and Location before submitting.")
         else:
-            st.info(
-                f"Report submitted (Frontend Preview): **{suspect}** with the "
-                f"**{weapon}** in the **{location}**."
-            )
+            try:
+                ev = evaluate_accusation(session, suspect, weapon, location)
+                with st.spinner("The other investigators are now reviewing your report..."):
+                    verdict = safe_complete(
+                        client,
+                        prompts.GM_SYSTEM,
+                        [{"role": "user", "content": prompts.verdict_prompt(session, ev, (suspect, weapon, location))}],
+                        None,
+                    )
+                st.session_state.verdict_result = (ev, verdict or "")
+            except ValueError as e:
+                st.error(str(e))
+
+    if "verdict_result" in st.session_state:
+        ev, verdict = st.session_state.verdict_result
+        if ev.won:
+            st.success(f"Case Solved! Score: {ev.score}/100")
+        else:
+            st.error(f"Not quite, detective! Score: {ev.score}/100")
+        st.markdown(verdict)

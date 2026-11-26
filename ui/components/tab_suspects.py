@@ -1,3 +1,7 @@
+import re
+from game import pick_clue
+from guard import looks_like_injection, safe_complete, is_stonewall, SAFE_DEFLECTION
+import prompts
 import streamlit as st
 from models import GameSession
 
@@ -15,8 +19,25 @@ def _mugshot(img_html: str = "") -> str:
     )
     return f'<div class="mugshot-box"><div class="height-chart">{rows}</div>{img_html}</div>'
 
+def _format_cat_reply(raw: str) -> str:
+    resp = re.search(r"\*\*Response:\*\*\s*(.*?)(?=\*\*Observed Behavior:\*\*|$)", raw, re.S)
+    beh = re.search(r"\*\*Observed Behavior:\*\*\s*(.*)", raw, re.S)
 
-def render(session: GameSession):
+    if resp:
+        body = esc(resp.group(1).strip().strip('"'))
+        body = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", body)
+        out = f"<div>{body}</div>"
+        if beh:
+            behavior = esc(beh.group(1).strip().strip("*"))
+            out += f'<div style="margin-top:0.45rem; font-style:italic; font-size:0.88rem; opacity:0.85;">{behavior}</div>'
+        return out
+
+    clean = esc(raw)
+    clean = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", clean)
+    clean = re.sub(r"\*(.+?)\*", r"<em>\1</em>", clean)
+    return clean
+
+def render(session: GameSession, client):
     if "suspect_idx" not in st.session_state:
         st.session_state.suspect_idx = 0
 
@@ -64,7 +85,9 @@ def render(session: GameSession):
 
     messages = session.history.setdefault(cat.name, [])
     bubbles = "".join(
-        f'<div class="{"bubble-user" if m["role"] == "user" else "bubble-cat"}">{esc(m["content"])}</div>'
+        f'<div class="bubble-user">{esc(m["content"])}</div>'
+        if m["role"] == "user"
+        else f'<div class="bubble-cat">{_format_cat_reply(m["content"])}</div>'
         for m in messages
     )
 
@@ -98,13 +121,29 @@ def render(session: GameSession):
                 sent = send_col.form_submit_button("↑")
 
     if sent and question.strip():
-        messages.append({"role": "user", "content": question.strip()})
-        # Temporary frontend placeholder reply until this is wired to game.py / the LLM
-        messages.append(
-            {
-                "role": "assistant",
-                "content": f"*{cat.name} flicks their tail ({cat.archetype}).* "
-                f"Why are you asking me about '{question.strip()}'? I already told you my alibi!",
-            }
-        )
+        q = question.strip()
+        if looks_like_injection(q):
+            messages.append({"role": "user", "content": q})
+            messages.append({"role": "assistant", "content": SAFE_DEFLECTION})
+            st.rerun()
+
+        clue = pick_clue(session, cat, q)
+        messages.append({"role": "user", "content": q})
+
+        with st.spinner(f"{cat.name} is thinking..."):
+            reply = safe_complete(
+                client,
+                prompts.cat_system(session, cat, clue),
+                messages,
+                session.solution,
+                reject=is_stonewall,
+            )
+
+        if reply is None:
+            messages.pop()
+            messages.append({"role": "assistant", "content": SAFE_DEFLECTION})
+        else:
+            messages.append({"role": "assistant", "content": reply})
+            if clue:
+                session.discovered_clue_ids.add(clue.id)
         st.rerun()
