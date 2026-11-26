@@ -3,15 +3,16 @@ import random
 from models import Dataset, Cat, Clue, ConfirmedClue, Solution, GameSession, Evaluation
 
 VICTIMS = [
-    "Goldie, the household's prized goldfish",
+    "Kapitan Mingming's prized bowl of bangus belly",
+    "Goldie, Barangay Puspin's prized goldfish",
     "Pipit, the neighborhood's favorite pet maya bird",
-    "Mochi, the pampered show guinea pig",
 ]
 
 ALIBI_TEMPLATES = [
     "I was hanging out at the {L} all evening, minding my own business.",
     "I spent the whole night near the {L}. Ask anyone.",
     "I never left the {L} once—not even for merienda.",
+    "I was curled up by the {L} the entire time, completely out of the way.",
 ]
 
 GENERIC = {
@@ -21,35 +22,60 @@ GENERIC = {
 }
 
 
-def _confirmed_clue(rng, weapons, locations, cats, sol, scene_clues: list[Clue]) -> ConfirmedClue:
-    """One always-true head-start clue that rules out an innocent option without repeating scene clues."""
-    already_eliminated = {c.eliminates for c in scene_clues}
+def _confirmed_clue(rng, weapons, locations, cats: list[Cat], sol: Solution) -> ConfirmedClue:
+    """One always-true head-start clue based on a trait of the solution—never naming a suspect/weapon/location."""
+    culprit_cat = next(c for c in cats if c.name == sol.culprit)
     options: list[ConfirmedClue] = []
 
-    for c in cats:
-        if c != sol.culprit and c not in already_eliminated:
-            options.append(ConfirmedClue(
-                kind="suspect", key=c,
-                text=f"{c} is definitely NOT the culprit."
-            ))
-    for w in weapons:
-        if w.name != sol.weapon and w.name not in already_eliminated:
-            options.append(ConfirmedClue(
-                kind="weapon", key=w.name,
-                text=f"The {w.name} was definitely NOT the murder weapon."
-            ))
-    for l in locations:
-        if l.name != sol.location and l.name not in already_eliminated:
-            options.append(ConfirmedClue(
-                kind="location", key=l.name,
-                text=f"The crime definitely did NOT take place at the {l.name}."
-            ))
+    # 1. Suspect breed/coat trait clues (only if it narrows 4 suspects down to 2-3)
+    is_puspin = "puspin" in culprit_cat.breed.lower()
+    puspin_count = sum(1 for c in cats if "puspin" in c.breed.lower())
+    if 2 <= puspin_count <= 3:
+        options.append(ConfirmedClue(
+            kind="suspect",
+            key="puspin",
+            text="The culprit is definitely a puspin." if is_puspin else "The culprit is definitely NOT a puspin."
+        ))
+
+    is_patterned = any(k in culprit_cat.breed.lower() for k in ("tabby", "calico"))
+    patterned_count = sum(1 for c in cats if any(k in c.breed.lower() for k in ("tabby", "calico")))
+    if 2 <= patterned_count <= 3:
+        options.append(ConfirmedClue(
+            kind="suspect",
+            key="patterned",
+            text="The culprit definitely has patterned fur." if is_patterned else "The culprit is definitely solid- or cream-coated."
+        ))
+
+    # 2. Weapon category clues
+    kitchen_weapons = {"Kawali", "Sandok", "Kandila"}
+    is_kitchen = sol.weapon in kitchen_weapons
+    kitchen_count = sum(1 for w in weapons if w.name in kitchen_weapons)
+    if 2 <= kitchen_count <= 3:
+        options.append(ConfirmedClue(
+            kind="weapon",
+            key="kitchen",
+            text="The murder weapon is definitely something from the kitchen." if is_kitchen else "The murder weapon is definitely NOT a kitchen item."
+        ))
+
+    # 3. Location setting clues
+    outdoor_locs = {"Garden", "Bubong", "Jeepney"}
+    is_outdoor = sol.location in outdoor_locs
+    outdoor_count = sum(1 for l in locations if l.name in outdoor_locs)
+    if 2 <= outdoor_count <= 3:
+        options.append(ConfirmedClue(
+            kind="location",
+            key="setting",
+            text="The crime definitely took place outdoors." if is_outdoor else "The crime definitely took place indoors."
+        ))
 
     if options:
         return rng.choice(options)
 
-    innocent = rng.choice([c for c in cats if c != sol.culprit])
-    return ConfirmedClue(kind="suspect", key=innocent, text=f"{innocent} is definitely NOT the culprit.")
+    return ConfirmedClue(
+        kind="weapon",
+        key=sol.weapon,
+        text="The culprit definitely used an everyday household object."
+    )
 
 
 def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
@@ -65,10 +91,18 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
     culprit = solution.culprit
     safe_locs = [l.name for l in locations if l.name != solution.location]
 
-    # Everyone claims a (non-crime) location. Only innocents get a witness clue.
-    alibi_loc = {n: rng.choice(safe_locs) for n in names}
-    cats = [Cat(**p.model_dump(),
-                alibi=rng.choice(ALIBI_TEMPLATES).format(L=alibi_loc[p.name])) for p in profiles]
+    # Shuffle safe locations and templates so each cat gets a distinct alibi and spread-out locations
+    shuffled_locs = rng.sample(safe_locs, len(safe_locs))
+    shuffled_templates = rng.sample(ALIBI_TEMPLATES, len(ALIBI_TEMPLATES))
+
+    alibi_loc = {n: shuffled_locs[i % len(shuffled_locs)] for i, n in enumerate(names)}
+    cats = [
+        Cat(
+            **p.model_dump(),
+            alibi=shuffled_templates[i % len(shuffled_templates)].format(L=alibi_loc[p.name])
+        )
+        for i, p in enumerate(profiles)
+    ]
 
     # Elimination clues: each innocent suspect / weapon / location is ruled out once.
     pending = []   # (kind, eliminates, cat_text, scene_text, specific)
@@ -109,7 +143,7 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
             c.holder, i = rr[i % 4], i + 1
         next(cat for cat in cats if cat.name == c.holder).clues.append(c)
 
-    confirmed = _confirmed_clue(rng, weapons, locations, names, solution, scene)
+    confirmed = _confirmed_clue(rng, weapons, locations, cats, solution)
 
     return GameSession(
         victim=rng.choice(VICTIMS), cats=cats, weapons=weapons, locations=locations,
