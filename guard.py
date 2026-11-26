@@ -123,9 +123,10 @@ def build_messages(history: list[dict], tag: str) -> list[dict]:
 # ---------------- layer 4: output checks ----------------
 _URL = re.compile(r"(https?://|www\.)\S+", re.I)
 
-
 def clean_output(reply: str) -> str:
-    return _URL.sub("[link removed]", reply).strip()
+    reply = _URL.sub("[link removed]", reply)
+    reply = re.sub(r"<your spoken reply[^>]*>:\s*", "", reply, flags=re.I)
+    return reply.strip()
 
 
 def leaks_solution(reply: str, sol: Solution) -> bool:
@@ -146,14 +147,32 @@ def leaks_solution(reply: str, sol: Solution) -> bool:
     ]
     return any(re.search(p, low) for p in patterns)
 
-
 STONEWALL_PATTERNS = [
     r"nothing (more |else )?to (add|say|share)",
     r"no comment",
     r"i have nothing",
     r"i('d| would) rather not (say|talk)",
+    r"grooming my paws, detective",
+    r"your_original_spoken_reply_here",
 ]
 
+def is_repetitive(reply: str, history: list[dict]) -> bool:
+    """True if the new spoken response reuses >65% of the words from the cat's previous reply."""
+    prev_msgs = [m["content"] for m in history if m.get("role") == "assistant"]
+    if not prev_msgs:
+        return False
+
+    def _words(text: str) -> set[str]:
+        resp = re.search(r'\*{0,2}Response:\*{0,2}\s*(.*?)(?:\*{0,2}Observed|$)', text, re.S | re.I)
+        spoken = resp.group(1) if resp else text
+        return set(re.findall(r"[a-z]{3,}", spoken.lower()))
+
+    curr = _words(reply)
+    prev = _words(prev_msgs[-1])
+    if not curr or not prev:
+        return False
+    overlap = len(curr & prev) / max(len(curr), 1)
+    return overlap > 0.65
 
 def is_stonewall(reply: str) -> bool:
     """true for the lazy canned 'I have nothing to add' kind of answer."""

@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
@@ -26,6 +27,23 @@ st.set_page_config(
     layout="centered",
     initial_sidebar_state="collapsed",
 )
+def format_cat_bubble(raw: str) -> str:
+    # Strip "Currently Interrogating: Name (archetype / breed)" whether followed by a newline or space
+    text = re.sub(
+        r"\*{0,2}Currently Interrogating:\*{0,2}\s*[^(\n]+\([^)]+\)\s*",
+        "",
+        raw,
+        flags=re.I,
+    ).strip()
+
+    # Split out Observed Behavior (works with or without ** markdown)
+    parts = re.split(r"\*{0,2}Observed Behavior:\*{0,2}\s*", text, maxsplit=1, flags=re.I)
+    spoken = re.sub(r"^\*{0,2}Response:\*{0,2}\s*", "", parts[0], flags=re.I).strip().strip('"')
+
+    if len(parts) == 2 and parts[1].strip():
+        action = parts[1].strip().strip("*")
+        return f"{spoken}\n\n*{action}*"
+    return spoken
 
 # Load custom CSS
 css_path = Path(__file__).parent / "assets" / "styles" / "main.css"

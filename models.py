@@ -65,7 +65,8 @@ class ConfirmedClue(BaseModel):
 
 class Cat(Suspect):
     alibi: str
-    clues: list[Clue] = Field(default_factory=list)   # ONLY this cat's knowledge
+    world_notes: list[str] = Field(default_factory=list)   # verified scenario facts this cat knows
+    clues: list[Clue] = Field(default_factory=list)         # eliminations this cat can reveal
 
 
 class Solution(BaseModel):
