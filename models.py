@@ -9,16 +9,19 @@ class Suspect(BaseModel):
     breed: str
     archetype: str
     voice_notes: str
+    icon: str
 
 
 class Weapon(BaseModel):
     name: str
     description: str
+    icon: str
 
 
 class Location(BaseModel):
     name: str
     description: str
+    icon: str
 
 
 class Dataset(BaseModel):
