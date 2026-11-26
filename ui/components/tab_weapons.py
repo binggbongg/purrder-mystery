@@ -1,7 +1,7 @@
 from models import GameSession
 
 from ui.components._utils import render_gallery
-from ui.mock_data import UI_EXTRAS
+from ui.components._utils import UI_EXTRAS
 
 
 def render(session: GameSession):
