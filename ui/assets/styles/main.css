@@ -48,16 +48,32 @@ header[data-testid="stHeader"] { background: transparent; }
 }
 
 /* ---------- Top navigation bar ---------- */
-.purrder-nav {
+.st-key-purrder_nav {
     background-color: var(--nav-beige);
     border-radius: 14px;
     padding: 0.7rem 2rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
-    display: flex;
-    align-items: center;
-    gap: 2.2rem;
     margin-bottom: 2.6rem;
+    gap: 0 !important;
 }
+.st-key-purrder_nav [data-testid="stMarkdownContainer"] { margin: 0 !important; }
+.st-key-purrder_nav [data-testid="stMarkdownContainer"] p { margin: 0; }
+
+/* one tight row: logo | links | empty spacer (gap between items is set here) */
+.st-key-purrder_nav [data-testid="stHorizontalBlock"] {
+    gap: 2.2rem !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+}
+.st-key-purrder_nav [data-testid="stColumn"] {
+    flex: 0 0 auto !important;        /* ignore the [2.4, 1.8, 1.6, 2.8] weights */
+    width: auto !important;
+    min-width: 0 !important;
+}
+.st-key-purrder_nav [data-testid="stColumn"]:last-child { flex: 1 1 auto !important; }
+.st-key-purrder_nav [data-testid="stColumn"] > [data-testid="stVerticalBlock"] { gap: 0; }
+
+/* logo */
 .purrder-logo {
     font-family: var(--font-pixel) !important;
     font-size: 2.6rem;
@@ -67,14 +83,48 @@ header[data-testid="stHeader"] { background: transparent; }
     color: var(--coral);
     display: flex;
     align-items: flex-start;
+    white-space: nowrap;
 }
-.purrder-magnifier { width: 2.2rem; height: 2.2rem; margin-left: -1.1rem; margin-top: -0.35rem; }
-.purrder-nav-link {
+.purrder-magnifier {
+    width: 2.2rem;
+    height: 2.2rem;
+    margin-left: -1.1rem;
+    margin-top: -0.35rem;
+    object-fit: contain;
+}
+
+/* nav links (these are st.buttons made to look like text links) */
+.st-key-nav_scene_btn, .st-key-new_round_btn { width: auto; }
+.st-key-nav_scene_btn button,
+.st-key-new_round_btn button,
+.st-key-nav_scene_btn button:hover,
+.st-key-new_round_btn button:hover,
+.st-key-nav_scene_btn button:focus,
+.st-key-new_round_btn button:focus {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.2rem 0.4rem !important;
+    min-height: auto !important;
+    cursor: pointer;
+}
+.st-key-nav_scene_btn button p,
+.st-key-new_round_btn button p {
     font-family: var(--font-nav) !important;
-    font-size: 1.15rem;
-    color: var(--text-black);
+    font-size: 1.15rem !important;
+    color: var(--text-black) !important;
+    white-space: nowrap;
 }
-.purrder-nav-link.active { text-decoration: underline; text-underline-offset: 4px; }
+.st-key-nav_scene_btn button p {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+.st-key-nav_scene_btn button:hover p,
+.st-key-new_round_btn button:hover p {
+    color: var(--highlight-red) !important;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
 
 /* ---------- Clipboard (Deduction Grid) button ---------- */
 .st-key-clipboard_btn {
@@ -505,6 +555,11 @@ div[data-baseweb="popover"] li[aria-selected="true"] {
     .item-row { flex-direction: column; text-align: center; }
     .dossier-grid { grid-template-columns: 1fr; }
     .mugshot-box { min-height: 11rem; border-right: none; border-bottom: 1.5px solid var(--text-black); }
+    .st-key-purrder_nav { padding: 0.6rem 1rem; }
+    .st-key-purrder_nav [data-testid="stHorizontalBlock"] { gap: 1rem !important; }
+    .purrder-logo { font-size: 1.8rem; }
+    .purrder-magnifier { width: 1.6rem; height: 1.6rem; margin-left: -0.8rem; }
+    .st-key-nav_scene_btn button p, .st-key-new_round_btn button p { font-size: 0.95rem !important; }
 }
 
 
