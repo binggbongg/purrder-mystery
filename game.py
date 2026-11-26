@@ -1,5 +1,6 @@
 """the game truth lives here. the LLM only phrases what python hands it."""
 import random
+import re
 from models import Dataset, Cat, Clue, ConfirmedClue, Solution, GameSession, Evaluation
 
 VICTIMS = [
@@ -20,6 +21,11 @@ GENERIC = {
     "weapon": ["weapon", "tool", "object", "found", "used"],
     "location": ["room", "place", "scene", "location", "clean", "spotless"],
 }
+
+OPEN_CLUE_WORDS = (
+    "see", "saw", "notice", "noticed", "hear", "heard", "anything",
+    "clue", "evidence", "know", "happen", "happened", "unusual", "suspicious",
+)
 
 
 def _confirmed_clue(rng, weapons, locations, cats: list[Cat], sol: Solution) -> ConfirmedClue:
@@ -75,15 +81,16 @@ def _confirmed_clue(rng, weapons, locations, cats: list[Cat], sol: Solution) -> 
     return rng.choice([
         ConfirmedClue(
             kind="weapon",
-            key=sol.weapon,
+            key="kitchen",
             text="The murder weapon is definitely something from the kitchen." if is_kitchen else "The murder weapon is definitely NOT a kitchen item."
         ),
         ConfirmedClue(
             kind="location",
-            key=sol.location,
+            key="setting",
             text="The crime definitely took place outdoors." if is_outdoor else "The crime definitely took place indoors."
         ),
     ])
+
 
 def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
     seed = random.randrange(10**9) if seed is None else seed
@@ -107,25 +114,34 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
     scenario_type = rng.choice(["verified_pair", "slipped_away", "cross_sighting"])
     notes_by_name: dict[str, list[str]] = {n: [] for n in names}
     claimed_loc: dict[str, str] = {}
-    pending = []   # (kind, eliminates, cat_text, scene_text, specific)
+    # (kind, eliminates, holder_or_none_for_scene, cat_text, scene_text, specific)
+    pending: list[tuple[str, str, str | None, str, str, list[str]]] = []
 
     if scenario_type == "verified_pair":
         claimed_loc = {cat_a: loc_1, cat_b: loc_1, cat_c: loc_2, culprit: loc_3}
-        notes_by_name[cat_a].append(f"You stayed at the {loc_1} with {cat_b} the entire evening. You never went anywhere else.")
-        notes_by_name[cat_b].append(f"You stayed at the {loc_1} with {cat_a} the entire evening. You never went anywhere else.")
-        notes_by_name[cat_c].append(f"You stayed alone at the {loc_2} the entire evening. You never went anywhere else.")
-        notes_by_name[culprit].append(f"You claim you stayed alone at the {loc_3} the entire evening. Nobody was with you.")
+        notes_by_name[cat_a].append(
+            f"FIXED LOCATION: You stayed at the {loc_1} with {cat_b} the ENTIRE evening. You NEVER went to any other room, and {culprit} was NEVER with you."
+        )
+        notes_by_name[cat_b].append(
+            f"FIXED LOCATION: You stayed at the {loc_1} with {cat_a} the ENTIRE evening. You NEVER went to any other room, and {culprit} was NEVER with you."
+        )
+        notes_by_name[cat_c].append(
+            f"FIXED LOCATION: You stayed alone at the {loc_2} the ENTIRE evening. You NEVER went to any other room, and {culprit} was NEVER with you."
+        )
+        notes_by_name[culprit].append(
+            f"ALIBI TO DEFEND: You claim you stayed alone at the {loc_3} the entire evening with no witnesses. Stick firmly to this alibi and deny wrongdoing; never confess."
+        )
 
         pending.extend([
-            ("suspect", cat_b,
+            ("suspect", cat_b, cat_a,
              f"I was at the {loc_1} with {cat_b} the entire evening—neither of us ever left.",
              f"Both {cat_a} and {cat_b} were confirmed together at the {loc_1} all evening.",
              [cat_b.lower()]),
-            ("suspect", cat_a,
+            ("suspect", cat_a, cat_b,
              f"I stayed at the {loc_1} with {cat_a} all night long.",
              f"Pawprints confirm {cat_a} never left the {loc_1} all evening.",
              [cat_a.lower()]),
-            ("suspect", cat_c,
+            ("suspect", cat_c, None,
              f"Pawprints and fur show {cat_c} stayed alone at the {loc_2} all evening.",
              f"Pawprints and shed fur show {cat_c} spent the evening at the {loc_2}.",
              [cat_c.lower()]),
@@ -134,24 +150,28 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
     elif scenario_type == "slipped_away":
         claimed_loc = {cat_a: loc_1, culprit: loc_1, cat_b: loc_2, cat_c: loc_2}
         notes_by_name[cat_a].append(
-            f"You stayed at the {loc_1} all evening. {culprit} was with you early on, then {culprit} slipped away alone."
+            f"FIXED LOCATION: You stayed at the {loc_1} the ENTIRE evening and NEVER went anywhere else. {culprit} was with you at the {loc_1} early on, then {culprit} slipped away alone."
         )
         notes_by_name[culprit].append(
-            f"You started at the {loc_1} with {cat_a} then snuck away alone, though you claim you stayed at the {loc_1} with {cat_a} all evening."
+            f"ALIBI TO DEFEND: You claim you stayed at the {loc_1} with {cat_a} all evening. (Secretly you slipped away alone partway through—if pressed about leaving {cat_a}, get defensive or evasive in character, stick to your alibi, and NEVER confess or reveal the weapon/crime location.)"
         )
-        notes_by_name[cat_b].append(f"You stayed at the {loc_2} with {cat_c} the entire evening. You never went anywhere else.")
-        notes_by_name[cat_c].append(f"You stayed at the {loc_2} with {cat_b} the entire evening. You never went anywhere else.")
+        notes_by_name[cat_b].append(
+            f"FIXED LOCATION: You stayed at the {loc_2} with {cat_c} the ENTIRE evening. You NEVER went to any other room, and neither {cat_a} nor {culprit} was there."
+        )
+        notes_by_name[cat_c].append(
+            f"FIXED LOCATION: You stayed at the {loc_2} with {cat_b} the ENTIRE evening. You NEVER went to any other room, and neither {cat_a} nor {culprit} was there."
+        )
 
         pending.extend([
-            ("suspect", cat_a,
+            ("suspect", cat_a, None,
              f"Pawprints confirm {cat_a} never left the {loc_1} all evening.",
              f"Pawprints and shed fur show {cat_a} never left the {loc_1} all evening.",
              [cat_a.lower()]),
-            ("suspect", cat_c,
+            ("suspect", cat_c, cat_b,
              f"I was at the {loc_2} with {cat_c} the whole evening—we never separated.",
              f"Both {cat_b} and {cat_c} were confirmed together at the {loc_2} all evening.",
              [cat_c.lower()]),
-            ("suspect", cat_b,
+            ("suspect", cat_b, cat_c,
              f"I stayed at the {loc_2} with {cat_b} the entire night.",
              f"Pawprints confirm {cat_b} stayed at the {loc_2} all evening.",
              [cat_b.lower()]),
@@ -160,28 +180,28 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
     else:
         claimed_loc = {cat_a: loc_1, cat_b: loc_2, cat_c: loc_3, culprit: loc_1}
         notes_by_name[cat_a].append(
-            f"You stayed alone at the {loc_1} the entire evening. From there you saw {cat_b} at the {loc_2}, and {culprit} was NEVER at the {loc_1}."
+            f"FIXED LOCATION: You stayed alone at the {loc_1} the ENTIRE evening and NEVER left. From there you clearly saw {cat_b} at the {loc_2}, and {culprit} was NEVER at the {loc_1}."
         )
         notes_by_name[cat_b].append(
-            f"You stayed alone at the {loc_2} the entire evening, and from there you saw {cat_c} relaxing at the {loc_3}."
+            f"FIXED LOCATION: You stayed alone at the {loc_2} the ENTIRE evening and NEVER left. From there you clearly saw {cat_c} relaxing at the {loc_3}."
         )
         notes_by_name[cat_c].append(
-            f"You stayed alone at the {loc_3} the entire evening. You never went anywhere else."
+            f"FIXED LOCATION: You stayed alone at the {loc_3} the ENTIRE evening and NEVER left."
         )
         notes_by_name[culprit].append(
-            f"You falsely claim you stayed at the {loc_1} all evening, even though you were not there."
+            f"ALIBI TO DEFEND: You claim you stayed at the {loc_1} all evening. (Secretly you were NOT at the {loc_1}—if pressed on details about {loc_1} or {cat_a}, stay evasive or defensive in character, stick to your alibi, and NEVER confess or reveal the weapon/crime location.)"
         )
 
         pending.extend([
-            ("suspect", cat_b,
+            ("suspect", cat_b, cat_a,
              f"From my spot at the {loc_1}, I saw {cat_b} over at the {loc_2} the whole evening—and nobody else came into the {loc_1}.",
              f"Pawprints confirm {cat_b} stayed at the {loc_2} all evening.",
              [cat_b.lower()]),
-            ("suspect", cat_c,
+            ("suspect", cat_c, cat_b,
              f"From my spot at the {loc_2}, I saw {cat_c} staying put at the {loc_3} all evening.",
              f"Pawprints confirm {cat_c} spent the evening at the {loc_3}.",
              [cat_c.lower()]),
-            ("suspect", cat_a,
+            ("suspect", cat_a, None,
              f"Pawprints and shed fur show {cat_a} spent the evening alone at the {loc_1}.",
              f"Pawprints and shed fur show {cat_a} spent the evening alone at the {loc_1}.",
              [cat_a.lower()]),
@@ -199,80 +219,47 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
     }
     cats = [cats_by_name[n] for n in names]
 
-    # 2. Weapon clues (only safe weapons, placed at safe locations)
-    innocent_locs = [claimed_loc[n] for n in innocents]
-    for idx, w in enumerate(w for w in weapons if w.name != solution.weapon):
+    # Map each location occupied by innocents to the innocents actually there
+    witnesses_at_loc: dict[str, list[str]] = {}
+    for n in innocents:
+        witnesses_at_loc.setdefault(claimed_loc[n], []).append(n)
+
+    # 2. Weapon clues (only the 3 safe weapons; 1 goes to scene, 2 go to cats actually at those spots)
+    innocent_locs = list(witnesses_at_loc.keys())
+    rng.shuffle(innocent_locs)
+    safe_weapons = [w for w in weapons if w.name != solution.weapon]
+    rng.shuffle(safe_weapons)
+    scene_wep_name = safe_weapons[0].name
+    for idx, w in enumerate(safe_weapons):
         L = innocent_locs[idx % len(innocent_locs)]
-        pending.append(("weapon", w.name,
+        holder = None if w.name == scene_wep_name else rng.choice(witnesses_at_loc[L])
+        pending.append(("weapon", w.name, holder,
                         f"While I was at the {L}, the {w.name} stayed sitting right there untouched all evening.",
                         f"The {w.name} was found untouched at the {L}.",
                         [w.name.lower()]))
 
-    # 3. Location clues: each safe location stays clean
+    # 3. Location clues (only the 3 safe locations; any location with no innocent witness becomes the scene clue)
+    unwitnessed = [L for L in safe_locs if L not in witnesses_at_loc]
+    scene_loc_name = unwitnessed[0] if unwitnessed else rng.choice(safe_locs)
     for L in safe_locs:
-        pending.append(("location", L,
+        holder = None if L == scene_loc_name else rng.choice(witnesses_at_loc[L])
+        pending.append(("location", L, holder,
                         f"The {L} stayed completely spotless and undisturbed the whole time I was there.",
                         f"The {L} was spotless, with no sign of trouble.",
                         [L.lower()]))
 
-    clues = [Clue(id=f"c{i}", kind=k, eliminates=e, text=t, scene_text=s,
-                  specific=sp, generic=GENERIC[k]) for i, (k, e, t, s, sp) in enumerate(pending, 1)]
+    clues = [
+        Clue(id=f"c{i}", kind=k, eliminates=e, holder=h, text=t, scene_text=s,
+             specific=sp, generic=GENERIC[k])
+        for i, (k, e, h, t, s, sp) in enumerate(pending, 1)
+    ]
 
-    # Scene clues: pick the solo-trace suspect clue + 1 weapon + 1 location
-    scene_sus = next(c for c in clues if c.kind == "suspect" and "Pawprints" in c.text)
-    scene_wep = rng.choice([c for c in clues if c.kind == "weapon"])
-    scene_loc = rng.choice([c for c in clues if c.kind == "location"])
-    scene = [scene_sus, scene_wep, scene_loc]
+    scene = [c for c in clues if c.holder is None]
     scene_ids = {c.id for c in scene}
 
-    # Assign remaining clues ONLY to the cat who was actually at that location!
     for c in clues:
-        if c.id in scene_ids:
-            continue
-        if c.kind == "suspect" and c.eliminates == cat_b:
-            c.holder = cat_a
-        elif c.kind == "suspect" and c.eliminates == cat_a:
-            c.holder = cat_b
-        else:
-            witnesses = [n for n in innocents if claimed_loc[n].lower() in c.scene_text.lower()]
-            c.holder = rng.choice(witnesses) if witnesses else rng.choice(innocents)
-
-        holder_cat = cats_by_name[c.holder]
-        holder_cat.clues.append(c)
-        holder_cat.world_notes.append(c.text)
-
-    # 3. Location clues (all 3 safe locations)
-    for L in safe_locs:
-        pending.append(("location", L,
-                        f"I checked the {L} earlier and nothing was out of place—completely spotless.",
-                        f"The {L} was spotless, with no sign of trouble.",
-                        [L.lower()]))
-
-    clues = [Clue(id=f"c{i}", kind=k, eliminates=e, text=t, scene_text=s,
-                  specific=sp, generic=GENERIC[k]) for i, (k, e, t, s, sp) in enumerate(pending, 1)]
-
-    # One clue per category goes to the Crime Scene Overview
-    scene_sus = next(c for c in clues if c.kind == "suspect" and c.eliminates == cat_c)
-    scene_wep = rng.choice([c for c in clues if c.kind == "weapon"])
-    scene_loc = rng.choice([c for c in clues if c.kind == "location"])
-    scene = [scene_sus, scene_wep, scene_loc]
-    scene_ids = {c.id for c in scene}
-
-    # Assign remaining clues to holders matching who actually witnessed them
-    for c in clues:
-        if c.id in scene_ids:
-            continue
-        if c.kind == "suspect" and c.eliminates == cat_b:
-            c.holder = cat_a
-        elif c.kind == "suspect" and c.eliminates == cat_a:
-            c.holder = cat_b
-        else:
-            witnesses = [n for n in innocents if claimed_loc[n] in c.scene_text]
-            c.holder = rng.choice(witnesses) if witnesses else rng.choice(innocents)
-
-        holder_cat = cats_by_name[c.holder]
-        holder_cat.clues.append(c)
-        holder_cat.world_notes.append(f"What you also saw: {c.text}")
+        if c.holder is not None:
+            cats_by_name[c.holder].clues.append(c)
 
     confirmed = _confirmed_clue(rng, weapons, locations, cats, solution)
 
@@ -281,15 +268,25 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
         solution=solution, confirmed_clue=confirmed,
         scene_clues=scene, seed=seed, discovered_clue_ids=scene_ids)
 
+
+def _has_term(msg: str, term: str) -> bool:
+    return bool(re.search(rf"\b{re.escape(term.lower())}\b", msg))
+
+
 def pick_clue(session: GameSession, cat: Cat, msg: str) -> Clue | None:
     """At most one undiscovered clue per question, only if the question is relevant."""
-    msg, best, best_score = msg.lower(), None, 0
+    low = msg.lower()
+    best, best_score = None, 0
     for c in cat.clues:
         if c.id in session.discovered_clue_ids:
             continue
-        score = (3 if any(t in msg for t in c.specific) else 0) + sum(1 for g in c.generic if g in msg)
+        score = (4 if any(_has_term(low, t) for t in c.specific) else 0) + sum(1 for g in c.generic if _has_term(low, g))
         if score > best_score:
             best, best_score = c, score
+    if best is None and any(_has_term(low, w) for w in OPEN_CLUE_WORDS):
+        for c in cat.clues:
+            if c.id not in session.discovered_clue_ids:
+                return c
     return best
 
 

@@ -1,12 +1,20 @@
 import re
-from game import pick_clue
-from guard import looks_like_injection, safe_complete, is_stonewall, SAFE_DEFLECTION
-import prompts
 import streamlit as st
-from models import GameSession
 
-from ui.components._utils import esc, md
-from ui.components._utils import UI_EXTRAS
+import prompts
+from game import pick_clue
+from guard import (
+    MAX_TURNS_PER_CASE,
+    SAFE_DEFLECTION,
+    build_messages,
+    defense_footer,
+    is_stonewall,
+    new_tag,
+    safe_complete,
+    screen_input,
+)
+from models import GameSession
+from ui.components._utils import UI_EXTRAS, esc, md
 
 HEIGHT_MARKS = ["5'6\"", "", "5'0\"", "", "4'6\"", "", "4'0\"", "", "3'6\"", "", "3'0\"", ""]
 
@@ -18,6 +26,7 @@ def _mugshot(img_html: str = "") -> str:
         for mark in HEIGHT_MARKS
     )
     return f'<div class="mugshot-box"><div class="height-chart">{rows}</div>{img_html}</div>'
+
 
 def _format_cat_reply(raw: str) -> str:
     resp = re.search(r"\*\*Response:\*\*\s*(.*?)(?=\*\*Observed Behavior:\*\*|$)", raw, re.S)
@@ -36,6 +45,7 @@ def _format_cat_reply(raw: str) -> str:
     clean = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", clean)
     clean = re.sub(r"\*(.+?)\*", r"<em>\1</em>", clean)
     return clean
+
 
 def render(session: GameSession, client):
     if "suspect_idx" not in st.session_state:
@@ -121,29 +131,38 @@ def render(session: GameSession, client):
                 sent = send_col.form_submit_button("↑")
 
     if sent and question.strip():
-        q = question.strip()
-        if looks_like_injection(q):
-            messages.append({"role": "user", "content": q})
-            messages.append({"role": "assistant", "content": SAFE_DEFLECTION})
-            st.rerun()
+        if getattr(session, "turns", 0) >= MAX_TURNS_PER_CASE:
+            st.warning("The barangay is closing for the night, detective. Time to submit your report or start a New Round.")
+            return
 
-        clue = pick_clue(session, cat, q)
-        messages.append({"role": "user", "content": q})
+        clean, msg = screen_input(question.strip())
+        if clean is None:
+            st.warning(msg or SAFE_DEFLECTION)
+            return
+
+        if hasattr(session, "turns"):
+            session.turns += 1
+
+        clue = pick_clue(session, cat, clean)
+        messages.append({"role": "user", "content": clean})
+
+        tag = new_tag()
+        system = prompts.cat_system(session, cat, clue) + defense_footer(tag)
 
         with st.spinner(f"{cat.name} is thinking..."):
             reply = safe_complete(
                 client,
-                prompts.cat_system(session, cat, clue),
-                messages,
+                system,
+                build_messages(messages, tag),
                 session.solution,
                 reject=is_stonewall,
             )
 
         if reply is None:
             messages.pop()
-            messages.append({"role": "assistant", "content": SAFE_DEFLECTION})
+            st.warning(SAFE_DEFLECTION)
         else:
             messages.append({"role": "assistant", "content": reply})
             if clue:
                 session.discovered_clue_ids.add(clue.id)
-        st.rerun()
+            st.rerun()
