@@ -80,8 +80,15 @@ def render(session: GameSession, client):
 
     if "verdict_result" in st.session_state:
         ev, verdict = st.session_state.verdict_result
+        sol = session.solution
         if ev.won:
             st.success(f"Case Solved! Score: {ev.score}/100")
         else:
             st.error(f"Not quite, detective! Score: {ev.score}/100")
+            st.markdown(
+                f"**Suspect:** {'✅ Correct' if ev.culprit_correct else f'❌ Wrong (Truth: {sol.culprit})'}  \n"
+                f"**Weapon:** {'✅ Correct' if ev.weapon_correct else f'❌ Wrong (Truth: {sol.weapon})'}  \n"
+                f"**Location:** {'✅ Correct' if ev.location_correct else f'❌ Wrong (Truth: {sol.location})'}"
+            )
+        st.info(f"**Correct Answer:** {sol.culprit} with the {sol.weapon} at the {sol.location}")
         st.markdown(verdict)
