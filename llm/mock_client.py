@@ -26,46 +26,19 @@ def _lc(s: str) -> str:
 # overview
 def _story(prompt: str) -> str:
     victim = re.search(r"Victim: (.+?)\.\n", prompt).group(1)
-    vshort = victim.split(",")[0]
-    cats = re.findall(r"^- (.+?): a (.+?), the (.+)$", prompt, re.M)
-    weapons = re.findall(r"^- (.+?): (.+)$",
-                         re.search(r"Possible weapons:\n(.*?)\nPossible locations:", prompt, re.S).group(1), re.M)
-    places = re.findall(r"^- (.+?): (.+)$",
-                        re.search(r"Possible locations:\n(.*?)\nConfirmed initial scene findings", prompt, re.S).group(1), re.M)
-    clues_block = re.search(r"Confirmed initial scene findings.*?:\n(.*?)\n\nInstructions:", prompt, re.S).group(1)
+    names = re.search(r"Suspects \(4 neighborhood cats\): (.+)\n", prompt).group(1)
+    clues_block = re.search(r"Confirmed initial scene findings.*?:\n(.*?)\n\nFollow this exact", prompt, re.S).group(1)
     clues = [c.lstrip("- ").strip() for c in clues_block.splitlines() if c.strip() and c.strip() != "- (none)"]
 
     r = _rng(prompt)
-
-    occasion = r.choice([
-        "a lively barangay fiesta, with paper banderitas fluttering above the street",
-        "a sudden typhoon brownout, with rain drumming loudly on the tin roof",
-        "a late-night merienda gathering, with the warm scent of pandesal in the air",
-        "the neighborhood's annual videoke night, just as the loudest ballad hit its chorus",
-        "a quiet Sunday afternoon, while the whole household was distracted by a teleserye",
+    opener = r.choice([
+        f"Chaos struck Barangay Puspin tonight when {victim} was found dramatically knocked out cold!",
+        f"Trouble hit Barangay Puspin tonight after a sudden commotion left {victim} in peril!",
+        f"A hush fell over Barangay Puspin tonight when {victim} was discovered lifeless after a noisy scuffle!",
     ])
-    mood = r.choice([
-        "hummed with neighborhood chismis",
-        "was buzzing with playful tail-flicking energy",
-        "felt unusually quiet after dusk",
-        "smelled of garlic rice and trouble",
-    ])
-
-    cast_names = ", ".join(f"**{n}**" for n, _, _ in cats[:-1]) + f", and **{cats[-1][0]}**" if cats else "several neighborhood cats"
-    p1 = (f"It was during {occasion}, and the whole place {mood}. {cast_names} were all spotted lounging around "
-          f"the area before a sudden commotion broke the calm. When everyone rushed over, **{victim}** was found "
-          f"lifeless, bringing the evening to a sudden halt.")
-
-    w_names = ", ".join(f"**{n}**" for n, _ in weapons)
-    l_names = ", ".join(f"**{n}**" for n, _ in places)
-    clue_text = " ".join(
-        f"{'Neighbors also noted that ' + _lc(c) if i == 0 else 'Additionally, ' + _lc(c)}"
-        for i, c in enumerate(clues)
-    )
-    p2 = (f"Various everyday items—including the {w_names}—were scattered around spots like the {l_names}. "
-          f"{clue_text} Investigator **Mr. Meowslock** has already begun questioning the cats on the scene.")
-
-    return "\n\n".join([p1, p2])
+    clue_str = " ".join(clues)
+    return (f"{opener} Four neighborhood cats ({names}) were spotted nearby, and early checks show that {_lc(clue_str)} "
+            f"Interrogate the suspects, review the evidence, and fill out the Police Incident Report below.")
 
 
 # suspects
