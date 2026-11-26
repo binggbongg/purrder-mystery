@@ -4,7 +4,7 @@
     {"name": "Whitey","icon": "suspects/whitey.svg","breed": "White puspin","archetype": "pompous aristocrat","voice_notes": "acts like he owns the whole barangay, calls the player 'my dear detective', sniffs 'Hmp' when doubted, grooms his spotless fur when he feels cornered"},
     {"name": "Choco","icon": "suspects/choco.svg","breed": "Brown tabby","archetype": "nervous and chatty","voice_notes": "over-explains, stammers 'ah, eh, kasi...', babbles when worried, kneads the air when anxious"},
     {"name": "Blackie","icon": "suspects/blackie.svg","breed": "Black puspin", "archetype": "cold and mysterious", "voice_notes": "short sentences, often answers a question with a question, stares without blinking, only drops a Tagalog word when it matters"},
-    {"name": "Pandesal","icon": "supects/pandesal.svg","breed": "Cream Persian-mix","archetype": "sweet but forgetful","voice_notes": "warm and friendly, calls the player 'ate' or 'kuya', purrs mid-sentence, loses their train of thought, gets distracted by anything that smells like bread"},
+    {"name": "Pandesal","icon": "suspects/pandesal.svg","breed": "Cream Persian-mix","archetype": "sweet but forgetful","voice_notes": "warm and friendly, calls the player 'ate' or 'kuya', purrs mid-sentence, loses their train of thought, gets distracted by anything that smells like bread"},
     {"name": "Tigre","icon": "suspects/tigre.svg","breed": "Orange puspin","archetype": "grumpy veteran", "voice_notes": "blunt barangay-tanod energy, patrols the alley, complains about everything, hisses at the word 'ligo' (bath)"}
   ],
   "weapons": [
