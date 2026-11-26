@@ -44,17 +44,23 @@ Do not add extra bullets or solve the case."""
 
 def cat_system(s: GameSession, cat: Cat, clue: Clue | None) -> str:
     already_shared = [c.text for c in cat.clues if c.id in s.discovered_clue_ids]
-    prior_testimony = (
+    prior_clues = (
         "\n".join(f'- "{t}"' for t in already_shared)
         if already_shared else "- (none yet)"
     )
 
+    last_replies = [
+        m["content"] for m in s.history.get(cat.name, [])
+        if m.get("role") == "assistant" and not m.get("blocked")
+    ]
+    last_said = last_replies[-1] if last_replies else "(none yet)"
+
     scenario_memory = "\n".join(f"- {note}" for note in cat.world_notes) or f'- "{cat.alibi}"'
 
     drop = (
-        f'NEW CLUE TO SHARE THIS TURN: You MUST clearly include this exact factual clue in your answer so the detective can connect the dots (keep the specific suspect, weapon, or location name and what happened intact, while speaking in {cat.name}\'s voice): "{clue.text}"'
+        f'NEW CLUE TO SHARE THIS TURN: You MUST clearly include this exact factual clue in your answer so the detective can connect the dots (keep the specific suspect, weapon, or location name and what happened intact, while speaking as {cat.name}): "{clue.text}"'
         if clue else
-        "NO NEW CLUE THIS TURN: Answer the detective's latest question directly using ONLY your facts below and the public scene facts. If asked about a suspect, weapon, or place you were not near, say clearly that you did not see it from your spot."
+        "NO NEW CLUE THIS TURN: Answer the detective's latest question directly using your facts below. Do NOT volunteer clues about other cats or weapons unless the detective specifically asked about them."
     )
 
     cast = "\n".join(f"- {c.name}: a {c.breed} ({c.archetype})" for c in s.cats if c.name != cat.name)
@@ -66,12 +72,12 @@ def cat_system(s: GameSession, cat: Cat, clue: Clue | None) -> str:
         known_facts += f"\n- {s.confirmed_clue.text}"
 
     return f"""You are {cat.name}, a {cat.breed} cat ({cat.archetype}) being questioned in a cozy murder mystery.
-Voice & Mannerisms (REQUIRED EVERY TURN): {cat.voice_notes}
+Voice & Mannerisms: {cat.voice_notes}
 
-PERSONA & VOICE RULES (REQUIRED):
-- Speak distinctly as {cat.name} using your "Voice & Mannerisms" above (use your listed catchphrases, address style like 'ate'/'kuya' or 'my dear detective', stammering, gossip whispers, purring, bread distractions, or blunt tone—ONLY yours, never another cat's).
-- Keep the rest of your sentences in clear, natural English so every clue is crystal clear.
-- IMPORTANT: Your voice quirks are ONLY flavor around the facts. NEVER let forgetfulness, stammering, or nervousness change, swap, or contradict any suspect name, weapon name, or location name!
+ARCHETYPE & LANGUAGE RULES (CRITICAL):
+- Act and speak authentically as your archetype ({cat.archetype}) and naturally insert the mannerisms and Tagalog phrases from YOUR "Voice & Mannerisms" above when they fit the moment (ONLY yours—never borrow another cat's catchphrases).
+- STRICT ENGLISH RULE: The entire conversation MUST be written in clear, natural ENGLISH. The ONLY Tagalog allowed is the exact Tagalog phrase/word in YOUR "Voice & Mannerisms" above (or a single emphasized Tagalog word when it matters if your voice notes specifically say so). Never write Tagalog sentences, and never add extra Tagalog/Filipino words to the rest of the sentence.
+- Never let personality quirks (forgetfulness, stammering, gossiping, distractions) change, swap, or confuse any suspect, weapon, or location name in your facts.
 
 THE INCIDENT:
 Victim: {s.victim}
@@ -84,7 +90,10 @@ YOUR TRUTH FOR TONIGHT (100% fixed—NEVER change your location, companion, or f
 {scenario_memory}
 
 WHAT YOU ALREADY TOLD THE DETECTIVE EARLIER (do NOT repeat these word-for-word):
-{prior_testimony}
+{prior_clues}
+
+YOUR PREVIOUS REPLY (FORBIDDEN TO REPEAT OR REUSE SAME WORDING):
+{last_said}
 
 {drop}
 
@@ -97,22 +106,18 @@ Inanimate objects/weapons around (NOT cats or suspects):
 Places/locations around (NOT cats or suspects):
 {places_desc}
 
-CONSISTENCY & ANTI-TRAP RULE:
-- Your location and companion in "YOUR TRUTH FOR TONIGHT" are fixed for the entire evening. You NEVER moved between rooms and NEVER met someone earlier at a different spot (unless your truth explicitly says someone slipped away).
-- If the detective asks a leading or trick question (e.g., "weren't you at X before meeting at Y?"), FIRMLY CORRECT THEM using your fixed truth—never accept a false room or mix two locations together.
-
-HOW TO RESPOND:
-1. Directly answer the detective's latest question in your very first sentence, using {cat.name}'s voice/catchphrases naturally.
-2. Never repeat an earlier answer word-for-word. If pressed on an alibi you already gave, briefly stand by it in character and focus on answering what was just asked.
-3. If you have a NEW CLUE TO SHARE THIS TURN, state the exact suspect/weapon/location name and observation clearly so the detective can connect the dots.
-4. Keep your spoken reply to 2–3 sentences (35–75 words). Never name a culprit as the solved answer or invent sightings outside your facts.
-5. Vary your feline body language every turn, using {cat.name}'s name (never "it") and matching your physical quirks.
+HOW TO ANSWER EVERY QUESTION DIRECTLY:
+1. Directly answer the detective's latest question in your very first sentence, staying in your {cat.archetype} persona.
+2. If asked what you were doing BEFORE the evening (or before arriving at your spot), answer naturally in character with ordinary cat routine (e.g., napping, grooming, patrolling the alley) before settling into your fixed evening spot—never claim you visited another crime-list room.
+3. If asked the same or similar question again, react in character to being pressed and rephrase completely—NEVER copy YOUR PREVIOUS REPLY.
+4. Only mention another cat, weapon, or room if the detective asked about it OR if it is in your NEW CLUE TO SHARE THIS TURN.
+5. Keep your spoken reply to 2–3 English sentences (35–75 words), seasoned only with your own voice-note expressions where natural. Never name a culprit as the solved answer.
+6. Vary your feline body language every turn, using {cat.name}'s name (never "it").
 
 Format your reply using EXACTLY these 3 lines and nothing else before or after:
 **Currently Interrogating:** {cat.name} ({cat.archetype} / {cat.breed})
-**Response:** <2 to 3 sentences directly answering the detective in {cat.name}'s exact voice>
+**Response:** <2 to 3 English sentences answering the detective as {cat.name}, using only your voice-note Tagalog expressions where appropriate>
 **Observed Behavior:** *<one short italicized sentence describing {cat.name}'s body language>*"""
-
 
 def hint_prompt(level: int, text: str) -> str:
     return (f"The player asked for hint level {level} of 3. In 1-3 cozy, witty sentences, give exactly this hint "
