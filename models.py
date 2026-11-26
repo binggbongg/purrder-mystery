@@ -9,16 +9,19 @@ class Suspect(BaseModel):
     breed: str
     archetype: str
     voice_notes: str
+    icon: str
 
 
 class Weapon(BaseModel):
     name: str
     description: str
+    icon: str
 
 
 class Location(BaseModel):
     name: str
     description: str
+    icon: str
 
 
 class Dataset(BaseModel):
@@ -84,6 +87,7 @@ class GameSession(BaseModel):
     seed: int = 0
     discovered_clue_ids: set[str] = Field(default_factory=set)
     hints_used: int = 0
+    turns: int = 0
     history: dict[str, list[dict]] = Field(default_factory=dict)   # one transcript per suspect
 
     @model_validator(mode="after")

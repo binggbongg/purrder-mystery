@@ -7,6 +7,14 @@ import hashlib
 import random
 import re
 
+_WRAP = re.compile(r"<(dtv_\w+)>(.*?)</\1>", re.S)
+
+
+def _unwrap(text: str) -> str:
+    """guard.build_messages wraps player text in a random tag; the mock wants the raw words."""
+    m = _WRAP.search(text)
+    return m.group(2) if m else text
+
 
 def _rng(*parts) -> random.Random:
     return random.Random(int(hashlib.sha256("|".join(map(str, parts)).encode()).hexdigest(), 16))
@@ -73,10 +81,10 @@ def _cat_reply(system: str, messages: list[dict]) -> str:
     places = [p.strip() for p in g(r"^Places around: (.+)$", re.M).split(",")]
     alibi = g(r"never contradict it\): (.+)")
     clue = g(r'in your own voice: "(.+?)"')
-    last = messages[-1]["content"]
+    last = _unwrap(messages[-1]["content"])
     q = last.lower()
     norm = lambda t: re.sub(r"[^a-z ]", "", t.lower()).strip()
-    repeats = sum(1 for m in messages[:-1] if m["role"] == "user" and norm(m["content"]) == norm(last))
+    repeats = sum(1 for m in messages[:-1] if m["role"] == "user" and norm(_unwrap(m["content"])) == norm(last))
     r = _rng(name, len(messages), q, repeats)
     sents = _sentences(story)
 

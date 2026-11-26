@@ -1,0 +1,690 @@
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Jost:wght@300;400;500;600;700&family=Josefin+Slab:wght@400;600&display=swap');
+
+:root {
+    --bg-cream: #FFF6F0;
+    --folder-brown: #BF8055;
+    --folder-tab-inactive: #A66B43;
+    --nav-beige: #F7DEC2;
+    --coral: #F2766B;
+    --text-black: #000000;
+    --highlight-red: #C60000;
+    --text-desc: #502D1C;
+    --suspect-yellow: #FFDD62;
+    --suspect-bubble: #FDEEBF;
+    --paper-offwhite: #F6EDE2;
+
+    /* Swap these two to change the fonts everywhere */
+    --font-pixel: 'Pixelify Sans', 'Courier New', monospace;
+    --font-body: 'Jost', 'Helvetica Neue', Arial, sans-serif;
+    --font-nav: 'Josefin Slab', Georgia, serif;
+
+    /* ===== QUICK KNOBS: tweak these first ===== */
+    --folder-width: 82%;                          /* width of the folder under the navbar */
+    --folder-pad: 2.2rem 3.2rem 2.4rem 3.2rem;    /* space between folder edge and paper (top right bottom left) */
+    --tab-font-size: 1.4rem;                      /* "Crime Scene / Suspects ..." text size */
+    --tab-pad-y: 0.55rem;                         /* tab height (vertical padding) */
+    --tab-pad-x: 1.15rem;                         /* tab width (horizontal padding) */
+    --row-height: 3.1rem;                         /* height of Suspect / Weapon / Location rows */
+    --grid-cell: 3.4rem;                          /* size of one deduction-grid square */
+    --grid-label-w: 2.4rem;                       /* width of the vertical WEAPONS / LOCATIONS labels */
+}
+
+/* ---------- Base layout & Streamlit chrome ---------- */
+html, body, .stApp, [data-testid="stAppViewContainer"] {
+    background-color: var(--bg-cream) !important;
+}
+.stApp, .stApp p, .stApp label, .stApp input, .stApp button,
+.stApp [data-testid="stMarkdownContainer"] {
+    font-family: var(--font-body) !important;
+}
+.stApp { color: var(--text-black); }
+header[data-testid="stHeader"] { background: transparent; }
+[data-testid="stToolbar"], [data-testid="stDecoration"], #MainMenu, footer { display: none !important; }
+
+[data-testid="stMainBlockContainer"], .block-container {
+    max-width: 1000px;
+    padding: 1.5rem 1.5rem 4rem 1.5rem;
+    position: relative; /* anchor for the floating clipboard button */
+}
+
+/* ---------- Top navigation bar ---------- */
+.st-key-purrder_nav {
+    background-color: var(--nav-beige);
+    border-radius: 14px;
+    padding: 0.7rem 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+    margin-bottom: 2.6rem;
+    gap: 0 !important;
+}
+.st-key-purrder_nav [data-testid="stMarkdownContainer"] { margin: 0 !important; }
+.st-key-purrder_nav [data-testid="stMarkdownContainer"] p { margin: 0; }
+
+/* one tight row: logo | links | empty spacer (gap between items is set here) */
+.st-key-purrder_nav [data-testid="stHorizontalBlock"] {
+    gap: 2.2rem !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+}
+.st-key-purrder_nav [data-testid="stColumn"] {
+    flex: 0 0 auto !important;        /* ignore the [2.4, 1.8, 1.6, 2.8] weights */
+    width: auto !important;
+    min-width: 0 !important;
+}
+.st-key-purrder_nav [data-testid="stColumn"]:last-child { flex: 1 1 auto !important; }
+.st-key-purrder_nav [data-testid="stColumn"] > [data-testid="stVerticalBlock"] { gap: 0; }
+
+/* logo */
+.purrder-logo {
+    font-family: var(--font-pixel) !important;
+    font-size: 2.6rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    line-height: 1;
+    color: var(--coral);
+    display: flex;
+    align-items: flex-start;
+    white-space: nowrap;
+}
+.purrder-magnifier {
+    width: 2.2rem;
+    height: 2.2rem;
+    margin-left: -1.1rem;
+    margin-top: -0.35rem;
+    object-fit: contain;
+}
+
+/* nav links (these are st.buttons made to look like text links) */
+.st-key-nav_scene_btn, .st-key-new_round_btn { width: auto; }
+.st-key-nav_scene_btn button,
+.st-key-new_round_btn button,
+.st-key-nav_scene_btn button:hover,
+.st-key-new_round_btn button:hover,
+.st-key-nav_scene_btn button:focus,
+.st-key-new_round_btn button:focus {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.2rem 0.4rem !important;
+    min-height: auto !important;
+    cursor: pointer;
+}
+.st-key-nav_scene_btn button p,
+.st-key-new_round_btn button p {
+    font-family: var(--font-nav) !important;
+    font-size: 1.15rem !important;
+    color: var(--text-black) !important;
+    white-space: nowrap;
+}
+.st-key-nav_scene_btn button p {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+.st-key-nav_scene_btn button:hover p,
+.st-key-new_round_btn button:hover p {
+    color: var(--highlight-red) !important;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+/* ---------- Clipboard (Deduction Grid) button ---------- */
+.st-key-clipboard_btn {
+    position: absolute;
+    top: 7.4rem;
+    right: 1.5rem;
+    width: 5rem;
+    z-index: 50;
+}
+.st-key-clipboard_btn button {
+    width: 5rem;
+    height: 5rem;
+    min-height: 5rem;
+    border-radius: 50%;
+    padding: 0;
+    background-color: var(--nav-beige);
+    border: 1.5px solid #555;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 56%;
+    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='12' y='10' width='40' height='50' rx='9' fill='%23F2766B'/%3E%3Crect x='22' y='3' width='20' height='13' rx='5' fill='%23F2766B' stroke='%23F7DEC2' stroke-width='3'/%3E%3Crect x='20' y='25' width='24' height='5' rx='2.5' fill='%23F7DEC2'/%3E%3Crect x='20' y='35' width='24' height='5' rx='2.5' fill='%23F7DEC2'/%3E%3Crect x='20' y='45' width='24' height='5' rx='2.5' fill='%23F7DEC2'/%3E%3C/svg%3E");
+}
+.st-key-clipboard_btn button p { font-size: 0 !important; color: transparent !important; }
+.st-key-clipboard_btn button:hover { border-color: #000; transform: scale(1.04); }
+.st-key-clipboard_btn button:focus { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+
+/* ---------- Manila folder tabs ---------- */
+/* TAB ROW: size/colour of "Crime Scene | Suspects | Weapons | Locations" */
+[data-testid="stTabs"] { width: var(--folder-width); margin: 0 auto; }
+[data-testid="stTabs"], [data-testid="stTabs"] > div, [role="tablist"] { overflow: visible !important; }
+[role="tablist"] { gap: 0 !important; padding: 0 !important; background: transparent !important; border: none !important; }
+
+/* every tab button (inactive = dark brown) */
+[role="tablist"] > *:not([data-baseweb^="tab-"]),
+[data-testid="stTab"] {
+    background-color: var(--folder-tab-inactive) !important;
+    border: 2px solid var(--text-black) !important;
+    border-bottom: none !important;
+    border-radius: 16px 16px 0 0 !important;
+    padding: var(--tab-pad-y) var(--tab-pad-x) !important;
+    height: auto !important;
+    margin: 0 !important;
+    position: relative;
+    opacity: 1 !important;
+    cursor: pointer;
+}
+[role="tablist"] > * + *:not([data-baseweb^="tab-"]) { margin-left: -2px !important; }
+
+/* tab text */
+[role="tablist"] > * *, [data-testid="stTab"] * {
+    font-family: var(--font-pixel) !important;
+    font-size: var(--tab-font-size) !important;
+    font-weight: 700 !important;
+    color: #1a1a1a !important;
+}
+
+/* active tab = same brown as the folder body */
+[role="tablist"] > [aria-selected="true"],
+[data-testid="stTab"][aria-selected="true"] {
+    background-color: var(--folder-brown) !important;
+    z-index: 3;
+    box-shadow: 0 3px 0 var(--folder-brown); /* hides the folder's top border under the active tab */
+}
+
+/* Streamlit's own red underline + grey line: hidden */
+[data-baseweb="tab-border"], [data-baseweb="tab-highlight"] { display: none !important; }
+
+/* Folder body */
+[role="tabpanel"] {
+    background-color: var(--folder-brown);
+    border: 2px solid var(--text-black);
+    border-radius: 0 18px 18px 18px;
+    padding: var(--folder-pad) !important;
+    margin-top: -2px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Deduction grid panel (same folder look, no tabs) */
+.st-key-grid_panel {
+    width: var(--folder-width);
+    margin: 0 auto;
+    background-color: var(--folder-brown);
+    border: 2px solid var(--text-black);
+    border-radius: 18px;
+    padding: var(--folder-pad);
+}
+
+/* ---------- Paper sheet (outer + inner frame) ---------- */
+.paper-outer,
+[class*="st-key-paper_outer"] {
+    background-color: var(--paper-offwhite);
+    border: 2px solid var(--text-black);
+    padding: 1.4rem;
+}
+.paper-inner,
+[class*="st-key-paper_inner"] {
+    border: 1.5px solid var(--text-black);
+    padding: 1.1rem 1.15rem 1.4rem 1.15rem;
+    background-color: var(--paper-offwhite);
+}
+[class*="st-key-paper_inner"] { gap: 0 !important; }
+[class*="st-key-paper_inner"] [data-testid="stMarkdownContainer"] p { margin-bottom: 0; }
+
+/* Suspects: dossier, alibi, transcript and input all share one flush box */
+[class*="st-key-paper_inner_flush"] { padding: 0; overflow: hidden; }
+
+/* ---------- Typography helpers ---------- */
+.report-title {
+    font-family: var(--font-pixel) !important;
+    text-align: center;
+    color: var(--highlight-red);
+    font-size: 1.55rem;
+    font-weight: 700;
+    margin: 0 0 0.6rem 0;
+}
+.label-heading, .todo-title, .field-label, .dossier-label, .transcript-title, .item-title {
+    font-family: var(--font-pixel) !important;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+.label-heading { font-size: 1.05rem; }
+.todo-title { text-align: center; font-size: 1.05rem; padding: 0.9rem 0 0.9rem 0; }
+.section-divider {
+    border: none !important;
+    border-top: 2px solid var(--text-black) !important;
+    margin: 0.9rem 0 !important;
+    opacity: 1 !important;
+    height: 0;
+}
+.desc-text {
+    color: var(--text-desc);
+    line-height: 1.45;
+    font-size: 1rem;
+}
+.confirmed-clue {
+    color: var(--highlight-red);
+    font-size: 1rem;
+    margin: 0.5rem 0 0 0 !important;
+}
+
+/* ---------- Crime scene: Suspect / Weapon / Location table ---------- */
+.st-key-report_wrap [data-testid="stForm"] { border: none; padding: 0; }
+.st-key-report_wrap [data-testid="stVerticalBlock"] { gap: 0; }
+
+/* the table box */
+.st-key-report_table { border: 1.5px solid var(--text-black); gap: 0 !important; }
+/* each row = label cell + dropdown cell */
+.st-key-report_table [data-testid="stHorizontalBlock"] {
+    gap: 0 !important;
+    align-items: stretch;
+    min-height: var(--row-height);
+    border-bottom: 1.5px solid var(--text-black);
+}
+.st-key-report_table > *:last-child [data-testid="stHorizontalBlock"] { border-bottom: none; }
+/* cells: centre content vertically */
+.st-key-report_table [data-testid="stColumn"] {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: transparent !important;
+}
+.st-key-report_table [data-testid="stColumn"] > [data-testid="stVerticalBlock"] { justify-content: center; height: 100%; }
+.st-key-report_table [data-testid="stColumn"]:first-child { border-right: 1.5px solid var(--text-black); }
+.st-key-report_table [data-testid="stMarkdownContainer"] { margin: 0 !important; }
+.field-label { font-size: 1.05rem; padding: 0 0.9rem; }
+
+/* dropdown look inside the table */
+.st-key-report_table [data-testid="stSelectbox"] { width: 100%; }
+.st-key-report_table [data-testid="stSelectbox"] * { background-color: transparent !important; }
+.st-key-report_table [data-baseweb="select"] > div {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    min-height: var(--row-height);
+    padding: 0 0.6rem;
+    cursor: pointer;
+}
+.st-key-report_table [data-baseweb="select"] input,
+.st-key-report_table [data-baseweb="select"] [class*="ValueContainer"] > div {
+    color: var(--text-desc) !important;
+    font-size: 1rem;
+}
+.st-key-report_table [data-baseweb="select"] input::placeholder { color: #8C7566; opacity: 1; }
+.st-key-report_table [data-baseweb="select"] svg { fill: var(--text-desc); }
+
+/* dropdown list (opens in a portal outside the page container) */
+div[data-baseweb="popover"] ul[role="listbox"],
+div[data-baseweb="popover"] div[data-baseweb="menu"] {
+    background-color: var(--paper-offwhite) !important;
+    border: 1.5px solid var(--text-black);
+    border-radius: 0 !important;
+}
+div[data-baseweb="popover"] li[role="option"] {
+    background-color: var(--paper-offwhite) !important;
+    color: var(--text-desc) !important;
+    font-family: var(--font-body) !important;
+}
+div[data-baseweb="popover"] li[role="option"]:hover,
+div[data-baseweb="popover"] li[aria-selected="true"] {
+    background-color: var(--suspect-yellow) !important;
+    color: var(--text-black) !important;
+}
+.st-key-paper_inner_flush input::placeholder { color: #8C7566; opacity: 1; }
+
+/* Submit button: dashed red box */
+.st-key-report_wrap [data-testid="stFormSubmitButton"] { margin: 1.3rem 0 0.4rem 0; }
+.st-key-report_wrap [data-testid="stFormSubmitButton"] button {
+    background: transparent;
+    border: 2px dashed var(--highlight-red);
+    border-radius: 18px;
+    padding: 1.1rem 0.5rem;
+    min-height: 4rem;
+}
+.st-key-report_wrap [data-testid="stFormSubmitButton"] button p {
+    color: var(--highlight-red) !important;
+    font-size: 1.05rem;
+}
+.st-key-report_wrap [data-testid="stFormSubmitButton"] button:hover {
+    background: rgba(198, 0, 0, 0.07);
+    border-color: var(--highlight-red);
+}
+.sig-line { width: 55%; margin: 0.9rem auto 0.6rem auto; border-top: 1.5px solid var(--text-black); }
+.sig-name { text-align: center; color: var(--text-desc); font-size: 1rem; }
+
+/* ---------- Polaroid galleries (weapons & locations) ---------- */
+.item-row { display: flex; align-items: center; gap: 2.4rem; margin: 1.8rem 0; }
+.item-photo { flex: 0 0 150px; }
+.item-body { flex: 1; min-width: 0; }
+.item-title { font-size: 1.1rem; }
+.item-body p.desc-text { margin: 0.25rem 0 0.35rem 0; }
+.item-meta { font-weight: 600; color: var(--text-desc); font-family: var(--font-body); }
+
+.polaroid-frame {
+    background-color: #FFFFFF;
+    border: 1.5px solid var(--text-black);
+    padding: 9px 9px 34px 9px;
+    box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.14);
+    width: 132px;
+    margin: 0 auto;
+}
+.polaroid-img-box {
+    background-color: #E7EADF;   /* empty slot: drop an <img> in here later */
+    border: 1px solid var(--text-black);
+    height: 112px;
+    overflow: hidden;
+}
+.polaroid-img-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tilt-left { transform: rotate(-5deg); }
+.tilt-right { transform: rotate(5deg); }
+
+/* ---------- Suspects: flipper bar ---------- */
+.st-key-suspect_nav { margin-bottom: 1rem; }
+.st-key-suspect_nav button {
+    background-color: var(--paper-offwhite);
+    border: 2px solid var(--text-black);
+    border-radius: 10px;
+    min-height: 2.3rem;
+    padding: 0.2rem 0.4rem;
+}
+.st-key-suspect_nav button p {
+    font-family: var(--font-pixel) !important;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1a1a1a !important;
+}
+.st-key-suspect_nav button[kind="primary"],
+.st-key-suspect_nav [data-testid="stBaseButton-primary"] {
+    background-color: var(--suspect-yellow);
+    border-color: var(--text-black);
+}
+.st-key-suspect_nav button:hover { border-color: var(--highlight-red); }
+
+/* ---------- Suspects: dossier ---------- */
+.dossier-grid { display: grid; grid-template-columns: 36% 1fr; min-height: 13.5rem; }
+.mugshot-box {
+    position: relative;
+    background: #FFFFFF;
+    border-right: 1.5px solid var(--text-black);
+    overflow: hidden;
+}
+.mugshot-box img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.height-chart {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0.4rem 0 0.2rem 0;
+}
+.hc-row { position: relative; flex: 1; }
+.hc-row i { position: absolute; left: 2.6rem; right: 0; top: 0; border-top: 1px solid #333; }
+.hc-row.hc-major i { border-top: 2px solid #000; }
+.hc-row span {
+    position: absolute;
+    left: 0.5rem;
+    top: -0.55em;
+    font-family: var(--font-pixel);
+    font-size: 0.72rem;
+    color: #000;
+}
+.dossier-info { display: flex; flex-direction: column; }
+.dossier-row {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0 0.8rem;
+    border-bottom: 1.5px solid var(--text-black);
+    min-height: 2.6rem;
+}
+.dossier-row:last-child { border-bottom: none; }
+.dossier-label { font-size: 1rem; white-space: nowrap; }
+.dossier-value { color: var(--text-desc); font-size: 1rem; }
+
+.alibi-box { border-top: 1.5px solid var(--text-black); padding: 0.55rem 0.8rem 0.7rem 0.8rem; }
+.alibi-text { margin: 0.15rem 0 0 1.6rem !important; }
+
+/* ---------- Suspects: transcript v2 ---------- */
+.transcript-box {
+    box-sizing: border-box;
+    border-top: 1.5px solid var(--text-black);
+    height: 320px;
+    overflow-y: auto;
+    display: flex;
+    padding: 0.6rem 1.1rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--suspect-yellow) #DADADA;
+}
+.transcript-box::-webkit-scrollbar { width: 9px; }
+.transcript-box::-webkit-scrollbar-track { background: #DADADA; border-radius: 6px; }
+.transcript-box::-webkit-scrollbar-thumb { background: var(--suspect-yellow); border-radius: 6px; }
+.transcript-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    width: 100%;
+    height: auto;
+    padding-bottom: 0.5rem;
+}
+.transcript-title { text-align: center; font-size: 1.05rem; padding-top: 0.2rem; }
+
+
+/* ---------- Suspects: question input bar v2 ---------- */
+.st-key-paper_inner_flush [data-testid="stElementContainer"],
+.st-key-paper_inner_flush [data-testid="stMarkdownContainer"] {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.st-key-paper_inner_flush [data-testid="stForm"] {
+    position: relative;
+    z-index: 2;
+    background-color: var(--paper-offwhite) !important;
+    border: none !important;
+    border-top: 1.5px solid var(--text-black) !important;
+    border-radius: 0 !important;
+    padding: 0.8rem 1rem !important;
+    margin-top: 0 !important;
+}
+
+.bubble-user, .bubble-cat {
+    border: 1.5px solid var(--text-black);
+    padding: 0.7rem 1.1rem;
+    font-size: 1rem;
+    line-height: 1.4;
+}
+.bubble-user {
+    align-self: flex-end;
+    background-color: var(--suspect-yellow);
+    color: var(--text-black);
+    border-radius: 24px 24px 0 24px;
+    max-width: 70%;
+}
+.bubble-cat {
+    align-self: flex-start;
+    background-color: var(--suspect-bubble);
+    color: var(--text-desc);
+    border-radius: 24px 24px 24px 0;
+    max-width: 78%;
+}
+
+/* ---------- Suspects: question input bar ---------- */
+.st-key-paper_inner_flush [data-testid="stForm"] {
+    border: none;
+    border-top: 1.5px solid var(--text-black);
+    border-radius: 0;
+    padding: 0.8rem 1rem;
+    margin-top: 0 !important;
+}
+.st-key-paper_inner_flush div[data-baseweb="input"] {
+    background-color: var(--suspect-bubble) !important;
+    border: 1.5px solid var(--text-black) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+.st-key-paper_inner_flush div[data-baseweb="base-input"],
+.st-key-paper_inner_flush input { background: transparent !important; color: var(--text-black); }
+.st-key-paper_inner_flush input { padding: 0.8rem 0.9rem; font-size: 1rem; }
+.st-key-paper_inner_flush [data-testid="stFormSubmitButton"] { display: flex; justify-content: flex-end; }
+.st-key-paper_inner_flush [data-testid="stFormSubmitButton"] button {
+    width: 3rem;
+    height: 3rem;
+    min-height: 3rem;
+    padding: 0;
+    border-radius: 50%;
+    background-color: var(--suspect-yellow);
+    border: 1.5px solid var(--text-black);
+}
+.st-key-paper_inner_flush [data-testid="stFormSubmitButton"] button p {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-black) !important;
+}
+.st-key-paper_inner_flush [data-testid="stFormSubmitButton"] button:hover { filter: brightness(0.96); }
+
+
+/* ---------- Small screens ---------- */
+@media (max-width: 768px) {
+    [data-testid="stTabs"], .st-key-grid_panel { width: 100%; }
+    [role="tabpanel"], .st-key-grid_panel { padding: 1.2rem 0.8rem !important; }
+    button[role="tab"] p { font-size: 1rem !important; }
+    .purrder-nav { gap: 1rem; padding: 0.6rem 1rem; }
+    .purrder-logo { font-size: 1.8rem; }
+    .st-key-clipboard_btn { top: 6.2rem; width: 3.6rem; }
+    .st-key-clipboard_btn button { width: 3.6rem; height: 3.6rem; min-height: 3.6rem; }
+    .item-row { flex-direction: column; text-align: center; }
+    .dossier-grid { grid-template-columns: 1fr; }
+    .mugshot-box { min-height: 11rem; border-right: none; border-bottom: 1.5px solid var(--text-black); }
+    .st-key-purrder_nav { padding: 0.6rem 1rem; }
+    .st-key-purrder_nav [data-testid="stHorizontalBlock"] { gap: 1rem !important; }
+    .purrder-logo { font-size: 1.8rem; }
+    .purrder-magnifier { width: 1.6rem; height: 1.6rem; margin-left: -0.8rem; }
+    .st-key-nav_scene_btn button p, .st-key-new_round_btn button p { font-size: 0.95rem !important; }
+}
+
+
+/* =====================================================================
+   DEDUCTION GRID (Murdle style)  -  ui/components/grid_drawer.py
+   ===================================================================== */
+/* rows: no gaps, never wrap into a stack on small screens */
+.st-key-grid_board,
+.st-key-grid_board [data-testid="stVerticalBlock"] { gap: 0 !important; }
+.st-key-grid_board [data-testid="stHorizontalBlock"] { gap: 0 !important; flex-wrap: nowrap !important; align-items: stretch; }
+.st-key-grid_board [data-testid="stColumn"] { min-width: 0 !important; }
+.st-key-grid_board [data-testid="stMarkdownContainer"] { margin: 0 !important; }
+
+/* the three board sections leave room on the left for the vertical labels */
+.st-key-grid_head, .st-key-grid_sec_w, .st-key-grid_sec_l {
+    position: relative;
+    padding-left: var(--grid-label-w);
+}
+.st-key-grid_sec_w::before, .st-key-grid_sec_l::before {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: var(--grid-label-w);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);          /* reads bottom-to-top like the reference */
+    font-family: var(--font-pixel);
+    font-size: 0.95rem;
+    letter-spacing: 3px;
+    color: #9A8F86;
+}
+.st-key-grid_sec_w::before { content: "WEAPONS"; }
+.st-key-grid_sec_l::before { content: "LOCATIONS"; }
+
+/* group titles above the columns */
+.grid-titles { display: grid; grid-template-columns: repeat(9, 1fr); margin-bottom: 0.3rem; }
+.grid-titles span {
+    text-align: center;
+    font-family: var(--font-pixel);
+    font-size: 0.95rem;
+    letter-spacing: 3px;
+    color: #9A8F86;
+}
+
+/* icons (header row + left column) */
+.grid-icon {
+    height: var(--grid-cell);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.grid-icon img { width: 68%; height: 68%; object-fit: contain; }
+.grid-icon-emoji { font-size: 1.8rem; line-height: 1; }
+.grid-icon-text {
+    font-family: var(--font-pixel);
+    font-size: 0.62rem;
+    line-height: 1.05;
+    text-align: center;
+    color: var(--text-desc);
+    word-break: break-word;
+    padding: 0 2px;
+}
+
+/* squares: thin 1px lines everywhere, thick 3px outline on the block edges */
+.st-key-grid_board [class*="st-key-gc_"] { width: 100%; }
+.st-key-grid_board [class*="st-key-gc_"] button {
+    width: 100%;
+    height: var(--grid-cell);
+    min-height: var(--grid-cell);
+    padding: 0;
+    border-radius: 0;
+    background: var(--paper-offwhite);
+    border: 0 solid var(--text-black) !important;
+    border-right-width: 1px !important;
+    border-bottom-width: 1px !important;
+    box-shadow: none !important;
+}
+.st-key-grid_board [class*="_etop"] button    { border-top-width: 3px !important; }
+.st-key-grid_board [class*="_eleft"] button   { border-left-width: 3px !important; }
+.st-key-grid_board [class*="_eright"] button  { border-right-width: 3px !important; }
+.st-key-grid_board [class*="_ebottom"] button { border-bottom-width: 3px !important; }
+
+.st-key-grid_board [class*="st-key-gc_"] button p {
+    font-family: var(--font-pixel) !important;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--text-black) !important;
+}
+.st-key-grid_board [class*="st-key-gc_s1_"] button p { color: var(--text-desc) !important; }  /* X */
+.st-key-grid_board [class*="st-key-gc_s2_"] button { background: #FFF1BF; }                     /* dot */
+.st-key-grid_board [class*="st-key-gc_"] button:hover { background: rgba(255, 221, 98, 0.5); }
+.st-key-grid_board [class*="st-key-gc_"] button:focus { outline: none; }
+
+/* legend sits in the empty bottom-right block */
+.st-key-grid_sec_l [data-testid="stElementContainer"]:has(.grid-legend) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: calc((100% - var(--grid-label-w)) * 4 / 9);
+    z-index: 2;
+}
+.grid-legend {
+    padding: 0.2rem 0 0 1.2rem;
+    font-size: 0.85rem;
+    color: var(--text-desc);
+    line-height: 1.9;
+}
+.grid-legend-title { font-family: var(--font-pixel); font-size: 0.95rem; color: #1a1a1a; }
+.lg-box {
+    display: inline-block;
+    width: 1.3rem; height: 1.3rem;
+    border: 1.5px solid var(--text-black);
+    text-align: center;
+    line-height: 1.15rem;
+    margin-right: 0.5rem;
+    background: var(--paper-offwhite);
+    vertical-align: middle;
+}
+
+/* buttons under the grid */
+.st-key-grid_reset button, .st-key-grid_back button {
+    background: transparent;
+    border: 2px dashed var(--text-black);
+    border-radius: 14px;
+    margin-top: 1rem;
+}
