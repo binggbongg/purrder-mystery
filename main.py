@@ -3,7 +3,8 @@ import sys
 from dotenv import load_dotenv
 from models import Dataset
 from game import new_game, pick_clue, next_hint, evaluate_accusation
-from guard import looks_like_injection, safe_complete, is_stonewall, SAFE_DEFLECTION
+from guard import (screen_input, safe_complete, is_stonewall, new_tag, defense_footer,
+                   build_messages, SAFE_DEFLECTION, MAX_TURNS_PER_CASE)
 from llm import get_client
 import prompts
 
@@ -165,18 +166,26 @@ def main():
             current = None
         elif text.startswith("/"):
             print("Unknown command. /help")
+        
         else:
             if not current:
                 print("Pick someone first: /interrogate <name>")
                 continue
-            if looks_like_injection(text):
-                print(SAFE_DEFLECTION)
+            if session.turns >= MAX_TURNS_PER_CASE:
+                print("The barangay is closing for the night, detective. Time to /accuse or start a /new case.")
                 continue
+            clean, msg = screen_input(text)
+            if clean is None:
+                print(msg)
+                continue
+            session.turns += 1
             cat = session.get_cat(current)
-            clue = pick_clue(session, cat, text)
+            clue = pick_clue(session, cat, clean)
             hist = session.history.setdefault(cat.name, [])
-            hist.append({"role": "user", "content": text})
-            reply = safe_complete(client, prompts.cat_system(session, cat, clue), hist, session.solution,
+            hist.append({"role": "user", "content": clean})
+            tag = new_tag()
+            system = prompts.cat_system(session, cat, clue) + defense_footer(tag)
+            reply = safe_complete(client, system, build_messages(hist, tag), session.solution,
                                   reject=is_stonewall)
             if reply is None:
                 hist.pop()
@@ -186,7 +195,6 @@ def main():
             if clue:
                 session.discovered_clue_ids.add(clue.id)
             print("\n" + reply + "\n")
-
 
 if __name__ == "__main__":
     main()
