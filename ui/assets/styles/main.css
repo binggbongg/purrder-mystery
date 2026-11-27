@@ -267,6 +267,19 @@ header[data-testid="stHeader"] { background: transparent; }
     margin: 0.5rem 0 0 0 !important;
 }
 
+/* Give the results room between widgets inside the otherwise flush report. */
+.st-key-investigation_results {
+    gap: 0.65rem;
+    padding-top: 0.75rem;
+}
+.st-key-investigation_results .label-heading {
+    margin-top: 0.35rem;
+    line-height: 1.3;
+}
+.st-key-investigation_results [data-testid="stMarkdownContainer"] p + p {
+    margin-top: 0.45rem;
+}
+
 /* ---------- Crime scene: Suspect / Weapon / Location table ---------- */
 .st-key-report_wrap [data-testid="stForm"] { border: none; padding: 0; }
 .st-key-report_wrap [data-testid="stVerticalBlock"] { gap: 0; }

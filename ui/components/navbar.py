@@ -15,6 +15,7 @@ ROUND_STATE_KEYS = (
     "guess_suspect",
     "guess_weapon",
     "guess_location",
+    "accusation_explanation",
 )
 
 
@@ -36,6 +37,8 @@ def _load_icon_img(filename: str) -> str:
 def _reset_round():
     for key in ROUND_STATE_KEYS:
         st.session_state.pop(key, None)
+    if "case" in st.query_params:
+        del st.query_params["case"]
 
 
 def render():

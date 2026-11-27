@@ -1,5 +1,6 @@
 import re
 from game import export_chat_history, pick_clue
+from investigation import begin_turn, finish_turn
 from guard import (
     MAX_TURNS_PER_CASE,
     SAFE_DEFLECTION,
@@ -113,7 +114,7 @@ def render(session: GameSession, client):
         for k, v in fields
     )
 
-    messages = session.history.setdefault(cat.name, [])
+    messages = session.history.get(cat.name, [])
     bubbles = "".join(
         f'<div class="bubble-user">{esc(m["content"])}</div>'
         if m["role"] == "user"
@@ -145,14 +146,16 @@ def render(session: GameSession, client):
             with transcript_slot.container():
                 md(card(bubbles))
 
-            with st.form(f"chat_form_{cat.name}", clear_on_submit=True, border=False):
+            request_id = f"chat-{len(session.investigation) + 1}"
+            with st.form(f"chat_form_{cat.name}_{request_id}", clear_on_submit=True, border=False):
                 inp_col, send_col = st.columns([8, 1], vertical_alignment="center", gap="small")
                 question = inp_col.text_input(
                     "Question",
                     placeholder="Type your questions here...",
                     label_visibility="collapsed",
+                    disabled=session.result is not None,
                 )
-                sent = send_col.form_submit_button("↑")
+                sent = send_col.form_submit_button("↑", disabled=session.result is not None)
 
     render_hint_box(session, client, key_prefix="suspect")
     render_clues_box(session, expanded=False)
@@ -172,9 +175,11 @@ def render(session: GameSession, client):
         use_container_width=True,
     )
 
-    if sent and question.strip():
+    if sent and question.strip() and session.result is None:
         q = question.strip()
+        messages = session.history.setdefault(cat.name, [])
         if session.turns >= MAX_TURNS_PER_CASE:
+            turn = begin_turn(session, q, cat.name, request_id, blocked=True)
             messages.append({
                 "role": "assistant",
                 "content": (
@@ -184,14 +189,22 @@ def render(session: GameSession, client):
                 ),
                 "blocked": True,
             })
+            if turn:
+                finish_turn(session, turn, messages[-1]["content"], testimony=False)
             st.rerun()
 
         clean, msg = screen_input(q)
         if clean is None:
+            turn = begin_turn(session, q, cat.name, request_id, blocked=True)
             messages.append({"role": "user", "content": q, "blocked": True})
             messages.append({"role": "assistant", "content": msg, "blocked": True})
+            if turn:
+                finish_turn(session, turn, msg, testimony=False)
             st.rerun()
 
+        turn = begin_turn(session, clean, cat.name, request_id)
+        if turn is None:
+            return
         session.turns += 1
         clue = pick_clue(session, cat, clean)
         messages.append({"role": "user", "content": clean})
@@ -226,4 +239,5 @@ def render(session: GameSession, client):
             if clue and not is_stonewall(reply):
                 if any(re.search(rf"\b{re.escape(t)}\b", reply, re.I) for t in clue.specific):
                     session.discovered_clue_ids.add(clue.id)
+        finish_turn(session, turn, reply or SAFE_DEFLECTION, testimony=bool(reply))
         st.rerun()

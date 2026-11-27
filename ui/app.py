@@ -16,6 +16,7 @@ from models import Dataset
 from game import new_game
 from guard import safe_complete
 from llm import get_client
+from session_store import SessionStore
 import prompts
 from ui.components import grid_drawer, navbar, tab_crime_scene, tab_locations, tab_suspects, tab_weapons
 
@@ -76,30 +77,36 @@ def start_new_case(client, dataset):
     return session
 
 
-client, dataset = load_backend()
+@st.cache_resource
+def load_session_store(path: Path):
+    return SessionStore(path)
 
-# Initialize real game session once
-if "session" not in st.session_state:
-    st.session_state.session = start_new_case(client, dataset)
+
+client, dataset = load_backend()
+store = load_session_store(Path(os.getenv("PURRDER_SESSION_DB") or ROOT_DIR / ".purrder" / "sessions.sqlite3"))
+
 if "show_grid" not in st.session_state:
     st.session_state.show_grid = False
-
-session = st.session_state.session
 
 # Top navigation bar + clipboard button (toggles the deduction grid)
 navbar.render()
 
-if st.session_state.show_grid:
-    grid_drawer.render(session)
-else:
-    # Manila folder tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["Crime Scene", "Suspects", "Weapons", "Locations"])
+case_id = st.query_params.get("case", "")
+with store.edit(case_id, lambda: st.session_state.get("session") or start_new_case(client, dataset)) as session:
+    if case_id != session.id:
+        st.query_params["case"] = session.id
+    # Existing releases held the round here. The store now owns it across reconnects.
+    st.session_state.pop("session", None)
 
-    with tab1:
-        tab_crime_scene.render(session, client)
-    with tab2:
-        tab_suspects.render(session, client)
-    with tab3:
-        tab_weapons.render(session)
-    with tab4:
-        tab_locations.render(session)
+    if st.session_state.show_grid:
+        grid_drawer.render(session)
+    else:
+        tab1, tab2, tab3, tab4 = st.tabs(["Crime Scene", "Suspects", "Weapons", "Locations"])
+        with tab1:
+            tab_crime_scene.render(session, client, checkpoint=store.save)
+        with tab2:
+            tab_suspects.render(session, client)
+        with tab3:
+            tab_weapons.render(session)
+        with tab4:
+            tab_locations.render(session)

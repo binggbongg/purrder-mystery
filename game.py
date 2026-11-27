@@ -267,7 +267,8 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
 
     clues = [
         Clue(id=f"c{i}", kind=k, eliminates=e, holder=h, text=t, scene_text=s,
-             specific=sp, generic=GENERIC[k])
+             specific=sp, generic=GENERIC[k],
+             importance="critical" if k == "weapon" and h is not None else "major")
         for i, (k, e, h, t, s, sp) in enumerate(pending, 1)
     ]
 
@@ -335,6 +336,8 @@ def clue_delivered(clue: Clue | None, reply: str) -> bool:
 
 def next_hint(session: GameSession) -> tuple[int, str] | None:
     """3-level ladder: nudge -> clears one innocent -> narrows to two. Never the answer."""
+    if session.result is not None:
+        return None
     level = session.hints_used + 1
     if level > 3:
         return None
@@ -439,6 +442,5 @@ def evaluate_accusation(session: GameSession, suspect: str, weapon: str, locatio
     cc, wc, lc = s == sol.culprit, w == sol.weapon, l == sol.location
     found = [c for c in session.all_clues() if c.id in session.discovered_clue_ids]
     missed = [c for c in session.all_clues() if c.id not in session.discovered_clue_ids]
-    score = round(100 * (cc + wc + lc) / 3)
     return Evaluation(culprit_correct=cc, weapon_correct=wc, location_correct=lc,
-                      score=score, found_clues=found, missed_clues=missed)
+                      accused=(s, w, l), found_clues=found, missed_clues=missed)

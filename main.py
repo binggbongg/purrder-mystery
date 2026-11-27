@@ -2,7 +2,9 @@ import os
 import sys
 from dotenv import load_dotenv
 from models import Dataset
-from game import new_game, pick_clue, next_hint, evaluate_accusation
+from game import new_game, pick_clue
+from investigation import begin_turn, deliver_hint, finish_turn
+from results import accusation_rows, score_label, submit_accusation
 from guard import (screen_input, safe_complete, is_stonewall, new_tag, defense_footer,
                    build_messages, SAFE_DEFLECTION, MAX_TURNS_PER_CASE)
 from llm import get_client
@@ -23,6 +25,7 @@ HELP = """commands (they mirror the tabs in the design):
   /clues                 every clue you've uncovered so far
   /hint                  get a hint (3 levels, never the answer)
   /accuse                SUBMIT REPORT: name the suspect, weapon and location
+  /accuse retry          retry an incomplete performance review
   /new                   start a brand-new case (blank slate)
   /help, /quit"""
 
@@ -93,6 +96,22 @@ def start_case(client, dataset):
     return session
 
 
+def show_results(session, ev):
+    print(f"\n{'Case solved' if ev.won else 'Case not solved'} — {score_label(ev)}")
+    for label, guess, actual, correct in accusation_rows(session, ev):
+        print(f"{label}: {guess} | Actual: {actual} | {'Correct' if correct else 'Incorrect'}")
+    if breakdown := ev.score_breakdown:
+        print(f"Rank: {breakdown.rank}")
+        for category in breakdown.categories:
+            print(f"  {category.name}: {category.earned:.2f}/{category.maximum:.2f}")
+        metrics = breakdown.metrics
+        print(f"Questions: {metrics.questions} ({metrics.meaningful} meaningful, "
+              f"{metrics.productive} productive, {metrics.redundant} redundant)")
+    print(f"Clues: {len(ev.found_clues)} discovered, {len(ev.missed_clues)} missed. "
+          f"Hints: {len(session.delivered_hints)} delivered.\n")
+    print(ev.verdict)
+
+
 def main():
     load_dotenv()
     client = get_client()
@@ -142,41 +161,55 @@ def main():
                     src = "Crime scene" if c.holder is None else c.holder
                     print(f"[{c.id}] {src}: {c.scene_text if c.holder is None else c.text}")
         elif cmd == "/hint":
-            h = next_hint(session)
-            if not h:
+            if session.result is not None:
+                print("Case closed. /new for another case.")
+                continue
+            hint = deliver_hint(session, client)
+            if hint is None:
                 print("That's all the hints I can give. The rest is up to you, detective!")
                 continue
-            reply = safe_complete(client, prompts.GM_SYSTEM,
-                                  [{"role": "user", "content": prompts.hint_prompt(*h)}], session.solution)
-            print(reply or h[1])
+            print(hint.text)
         elif cmd == "/accuse":
+            if session.result is not None:
+                show_results(session, submit_accusation(session, client, retry=arg.strip() == "retry"))
+                continue
             print(f"\n{BOLD}TO-DO: Fill Out Missing Information{RESET}")
             try:
                 sus = choose("Suspect", [c.name for c in session.cats])
                 weapon = choose("Weapon", [w.name for w in session.weapons])
                 loc = choose("Location", [l.name for l in session.locations])
-                ev = evaluate_accusation(session, sus, weapon, loc)
+                explanation = input("Explain your deduction (optional, Enter to skip): ")
+                ev = submit_accusation(session, client, (sus, weapon, loc), explanation)
             except ValueError as e:
                 print(e)
                 continue
-            print("\n" + (safe_complete(client, prompts.GM_SYSTEM,
-                                        [{"role": "user", "content": prompts.verdict_prompt(session, ev, (sus, weapon, loc))}],
-                                        None) or ""))
+            show_results(session, ev)
             print("\nCase closed. /new for another case, or /quit.")
             current = None
         elif text.startswith("/"):
             print("Unknown command. /help")
         
         else:
+            if session.result is not None:
+                print("Case closed. /new for another case.")
+                continue
             if not current:
                 print("Pick someone first: /interrogate <name>")
                 continue
+            request_id = f"chat-{len(session.investigation) + 1}"
             if session.turns >= MAX_TURNS_PER_CASE:
+                begin_turn(session, text, current, request_id, blocked=True)
                 print("The barangay is closing for the night, detective. Time to /accuse or start a /new case.")
                 continue
             clean, msg = screen_input(text)
             if clean is None:
+                turn = begin_turn(session, text, current, request_id, blocked=True)
+                if turn:
+                    finish_turn(session, turn, msg, testimony=False)
                 print(msg)
+                continue
+            turn = begin_turn(session, clean, current, request_id)
+            if turn is None:
                 continue
             session.turns += 1
             cat = session.get_cat(current)
@@ -189,11 +222,13 @@ def main():
                                   reject=is_stonewall)
             if reply is None:
                 hist.pop()
+                finish_turn(session, turn, SAFE_DEFLECTION, testimony=False)
                 print(SAFE_DEFLECTION)
                 continue
             hist.append({"role": "assistant", "content": reply})
             if clue:
                 session.discovered_clue_ids.add(clue.id)
+            finish_turn(session, turn, reply, testimony=True)
             print("\n" + reply + "\n")
 
 if __name__ == "__main__":
