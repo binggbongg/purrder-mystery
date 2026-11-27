@@ -126,6 +126,12 @@ _URL = re.compile(r"(https?://|www\.)\S+", re.I)
 def clean_output(reply: str) -> str:
     reply = _URL.sub("[link removed]", reply)
     reply = re.sub(r"<your spoken reply[^>]*>:\s*", "", reply, flags=re.I)
+    reply = re.sub(
+        r"(\*{0,2}Observed(?:\s+Behavior)?:\*{0,2}\s*\*?[^\n*]+\*?)\s*(?=\*{0,2}(?:Currently Interrogating|Response):).*$",
+        r"\1",
+        reply,
+        flags=re.S | re.I,
+    )
     return reply.strip()
 
 
@@ -169,7 +175,7 @@ STONEWALL_PATTERNS = [
 
 
 def is_repetitive(reply: str, history: list[dict]) -> bool:
-    """True if the new spoken response reuses >65% of the words from recent replies."""
+    """True if the new spoken response matches or reuses >55% of the words from recent replies."""
     prev_msgs = [m["content"] for m in history if m.get("role") == "assistant" and not m.get("blocked")]
     if not prev_msgs:
         return False
@@ -177,12 +183,15 @@ def is_repetitive(reply: str, history: list[dict]) -> bool:
     def _words(text: str) -> set[str]:
         return set(re.findall(r"[a-z]{3,}", _extract_spoken(text).lower()))
 
+    curr_spoken = _extract_spoken(reply).lower().strip()
     curr = _words(reply)
     if not curr:
         return False
     for prev_text in prev_msgs[-2:]:
+        if curr_spoken == _extract_spoken(prev_text).lower().strip():
+            return True
         prev = _words(prev_text)
-        if prev and (len(curr & prev) / max(len(curr), 1)) > 0.65:
+        if prev and (len(curr & prev) / max(len(curr), 1)) > 0.55:
             return True
     return False
 
@@ -213,8 +222,9 @@ def safe_complete(client, system: str, messages: list[dict], sol: Solution | Non
             return reply
         fallback = reply
         if attempt < retries and attempt_msgs and attempt_msgs[-1]["role"] == "user":
+            banned = _extract_spoken(reply)
             attempt_msgs[-1]["content"] += (
-                "\n[Retry instruction: Do not repeat your earlier wording or deflect. "
-                "Directly answer the detective's question in 2-3 new sentences using the exact 3-line format.]"
+                f'\n[Retry instruction: Do NOT repeat or paraphrase "{banned}". '
+                "Directly answer the specific question above in your character's voice using completely new wording and the 3-line format.]"
             )
     return fallback

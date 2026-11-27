@@ -42,7 +42,11 @@ def _format_cat_reply(raw: str) -> str:
         text,
         re.S | re.I,
     )
-    beh = re.search(r"\*{0,2}Observed(?:\s+Behavior)?:\*{0,2}\s*(.*)", text, re.S | re.I)
+    beh = re.search(
+        r"\*{0,2}Observed(?:\s+Behavior)?:\*{0,2}\s*([^\n]+?)(?=\s*\*{0,2}(?:Currently Interrogating|Response):|$)",
+        text,
+        re.S | re.I,
+    )
 
     if resp:
         body = esc(resp.group(1).strip().strip('"'))
@@ -146,7 +150,6 @@ def render(session: GameSession, client):
                 )
                 sent = send_col.form_submit_button("↑")
 
-    # Placed OUTSIDE `if sent` so it stays visible at all times
     render_hint_box(session, client, key_prefix="suspect")
     render_clues_box(session, expanded=False)
 
@@ -183,6 +186,7 @@ def render(session: GameSession, client):
                 system,
                 build_messages(llm_history, tag),
                 session.solution,
+                max_tokens=220,
                 reject=lambda r: is_stonewall(r) or is_repetitive(r, llm_history),
             )
 
