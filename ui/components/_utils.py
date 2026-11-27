@@ -4,9 +4,8 @@ import html
 from pathlib import Path
 
 import streamlit as st
-from game import get_discovered_clues, next_hint
-from guard import safe_complete
-import prompts
+from game import get_discovered_clues
+from investigation import deliver_hint
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -109,9 +108,6 @@ def render_clues_box(session, expanded: bool = False) -> None:
 
 def render_hint_box(session, client, key_prefix: str = "suspect") -> None:
     """Renders a 3-use Hint button + saved hint cards for the current round."""
-    hint_key = f"hints_log_{session.seed}"
-    if hint_key not in st.session_state:
-        st.session_state[hint_key] = []
     remaining = max(0, 3 - session.hints_used)
     label = (
         f"Ask Mr. Meowslock for a Hint ({remaining}/3 left)"
@@ -119,23 +115,16 @@ def render_hint_box(session, client, key_prefix: str = "suspect") -> None:
         else "No Hints Remaining (0/3)"
     )
     with st.container(key=f"hint_wrap_{key_prefix}"):
-        if st.button(label, disabled=remaining == 0, key=f"{key_prefix}_hint_btn", use_container_width=True):
-            h = next_hint(session)
-            if h:
-                with st.spinner("Mr. Meowslock is checking his notes..."):
-                    reply = safe_complete(
-                        client,
-                        prompts.GM_SYSTEM,
-                        [{"role": "user", "content": prompts.hint_prompt(*h)}],
-                        session.solution,
-                        max_tokens=180,
-                    )
-                st.session_state[hint_key].append((h[0], reply or h[1]))
+        if st.button(label, disabled=remaining == 0 or session.result is not None,
+                     key=f"{key_prefix}_hint_btn_{session.hints_used}", use_container_width=True):
+            with st.spinner("Mr. Meowslock is checking his notes..."):
+                hint = deliver_hint(session, client)
+            if hint:
                 st.rerun()
-        for lvl, text in st.session_state[hint_key]:
+        for hint in session.delivered_hints:
             md(
                 f'<div class="hint-card">'
-                f'<strong>Hint {lvl}/3 — Mr. Meowslock:</strong> {esc(text)}'
+                f'<strong>Hint {hint.level}/3 — Mr. Meowslock:</strong> {esc(hint.text)}'
                 f'</div>'
             )
 

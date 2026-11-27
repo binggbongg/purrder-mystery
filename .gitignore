@@ -18,6 +18,7 @@ __pycache__/
 
 # Streamlit local configuration & secrets
 .streamlit/secrets.toml
+.purrder/
 
 # VS Code workspace settings (keep if you want shared settings, ignore local caches)
 .vscode/*
