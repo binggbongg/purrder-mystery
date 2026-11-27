@@ -2,6 +2,9 @@
 import html
 
 import streamlit as st
+from game import get_discovered_clues, next_hint
+from guard import safe_complete
+import prompts
 
 UI_EXTRAS = {
     "suspects": {
@@ -33,6 +36,7 @@ UI_EXTRAS = {
         "Sunny windowsill": {"setting": "Indoors"},
     },
 }
+
 
 def esc(text) -> str:
     """Escape user / data supplied text before putting it inside HTML."""
@@ -66,6 +70,58 @@ def polaroid(idx: int, img_html: str = "") -> str:
         f'<div class="polaroid-img-box">{img_html}</div>'
         f"</div>"
     )
+
+
+def render_clues_box(session, expanded: bool = False) -> None:
+    """Collapsible notebook listing the confirmed clue + all uncovered scene/suspect clues."""
+    items, total = get_discovered_clues(session)
+    found_count = len(items) - 1  # exclude the head-start confirmed clue from x/9 count
+    with st.expander(f"Uncovered Clues ({found_count}/{total} found)", expanded=expanded):
+        rows = []
+        for item in items:
+            is_conf = item["id"] == "confirmed"
+            cls = "clue-card clue-card-confirmed" if is_conf else "clue-card"
+            badge = f'{esc(item["source"])}' if is_conf else f'{esc(item["source"])} • {esc(item["kind"].title())}'
+            rows.append(
+                f'<div class="{cls}">'
+                f'<div class="clue-badge">{badge}</div>'
+                f'<div class="clue-text">{esc(item["text"])}</div>'
+                f'</div>'
+            )
+        md("".join(rows))
+
+
+def render_hint_box(session, client, key_prefix: str = "suspect") -> None:
+    """Renders a 3-use Hint button + saved hint cards for the current round."""
+    hint_key = f"hints_log_{session.seed}"
+    if hint_key not in st.session_state:
+        st.session_state[hint_key] = []
+    remaining = max(0, 3 - session.hints_used)
+    label = (
+        f"Ask Mr. Meowslock for a Hint ({remaining}/3 left)"
+        if remaining > 0
+        else "No Hints Remaining (0/3)"
+    )
+    with st.container(key=f"hint_wrap_{key_prefix}"):
+        if st.button(label, disabled=remaining == 0, key=f"{key_prefix}_hint_btn", use_container_width=True):
+            h = next_hint(session)
+            if h:
+                with st.spinner("Mr. Meowslock is checking his notes..."):
+                    reply = safe_complete(
+                        client,
+                        prompts.GM_SYSTEM,
+                        [{"role": "user", "content": prompts.hint_prompt(*h)}],
+                        session.solution,
+                        max_tokens=180,
+                    )
+                st.session_state[hint_key].append((h[0], reply or h[1]))
+                st.rerun()
+        for lvl, text in st.session_state[hint_key]:
+            md(
+                f'<div class="hint-card">'
+                f'<strong>Hint {lvl}/3 — Mr. Meowslock:</strong> {esc(text)}'
+                f'</div>'
+            )
 
 
 def render_gallery(title: str, label: str, entries: list[tuple[str, str, str]]) -> None:

@@ -19,7 +19,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from ui.components._utils import esc, md
+from ui.components._utils import esc, md, render_clues_box
 
 ICON_DIR = Path(__file__).resolve().parent.parent / "assets" / "icons"
 IMAGE_EXT = re.compile(r"\.(png|jpe?g|gif|svg|webp)$", re.I)
@@ -188,6 +188,8 @@ def render(session=None):
                             for c, cat in enumerate(cats):
                                 with cols[1 + c]:
                                     _cell("ls", r, c, loc_row.name, cat.name, loc_names, cat_names)
+
+                render_clues_box(session, expanded=True)
 
                 btn_a, btn_b, _ = st.columns([1.3, 1.6, 3], gap="small")
                 btn_a.button("Clear grid", key="grid_reset", on_click=_reset, use_container_width=True)

@@ -1,12 +1,21 @@
 import re
-from game import pick_clue
-from guard import looks_like_injection, safe_complete, is_stonewall, SAFE_DEFLECTION
+from game import export_chat_history, pick_clue
+from guard import (
+    MAX_TURNS_PER_CASE,
+    SAFE_DEFLECTION,
+    build_messages,
+    defense_footer,
+    is_repetitive,
+    is_stonewall,
+    new_tag,
+    safe_complete,
+    screen_input,
+)
 import prompts
 import streamlit as st
 from models import GameSession
 
-from ui.components._utils import esc, md
-from ui.components._utils import UI_EXTRAS
+from ui.components._utils import UI_EXTRAS, esc, md, render_clues_box, render_hint_box
 
 HEIGHT_MARKS = ["5'6\"", "", "5'0\"", "", "4'6\"", "", "4'0\"", "", "3'6\"", "", "3'0\"", ""]
 
@@ -19,23 +28,44 @@ def _mugshot(img_html: str = "") -> str:
     )
     return f'<div class="mugshot-box"><div class="height-chart">{rows}</div>{img_html}</div>'
 
+
 def _format_cat_reply(raw: str) -> str:
-    resp = re.search(r"\*\*Response:\*\*\s*(.*?)(?=\*\*Observed Behavior:\*\*|$)", raw, re.S)
-    beh = re.search(r"\*\*Observed Behavior:\*\*\s*(.*)", raw, re.S)
+    text = re.sub(
+        r"\*{0,2}Currently Interrogating:\*{0,2}\s*[^\n]+\n*",
+        "",
+        raw,
+        flags=re.I,
+    ).strip()
+
+    resp = re.search(
+        r"\*{0,2}Response:\*{0,2}\s*(.*?)(?=\*{0,2}Observed(?:\s+Behavior)?:\*{0,2}|$)",
+        text,
+        re.S | re.I,
+    )
+    beh = re.search(
+        r"\*{0,2}Observed(?:\s+Behavior)?:\*{0,2}\s*([^\n]+?)(?=\s*\*{0,2}(?:Currently Interrogating|Response):|$)",
+        text,
+        re.S | re.I,
+    )
 
     if resp:
         body = esc(resp.group(1).strip().strip('"'))
         body = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", body)
+        body = re.sub(r"\*(.+?)\*", r"<em>\1</em>", body)
         out = f"<div>{body}</div>"
-        if beh:
+        if beh and beh.group(1).strip():
             behavior = esc(beh.group(1).strip().strip("*"))
-            out += f'<div style="margin-top:0.45rem; font-style:italic; font-size:0.88rem; opacity:0.85;">{behavior}</div>'
+            out += (
+                '<div style="margin-top:0.45rem; font-style:italic; '
+                f'font-size:0.88rem; opacity:0.85;">{behavior}</div>'
+            )
         return out
 
-    clean = esc(raw)
+    clean = esc(text)
     clean = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", clean)
     clean = re.sub(r"\*(.+?)\*", r"<em>\1</em>", clean)
     return clean
+
 
 def render(session: GameSession, client):
     if "suspect_idx" not in st.session_state:
@@ -91,11 +121,9 @@ def render(session: GameSession, client):
         for m in messages
     )
 
-    # Outer sheet -> flush inner box (dossier, alibi, transcript, input all share one border)
-    with st.container(key="paper_outer_suspects"):
-        with st.container(key="paper_inner_flush"):
-            md(
-                f"""
+    def card(bubbles_html: str) -> str:
+        """Dossier + alibi + transcript markup (rebuilt while waiting for a reply)."""
+        return f"""
                 <div class="dossier-grid">
                 {_mugshot()}
                 <div class="dossier-info">{info_rows}</div>
@@ -106,10 +134,16 @@ def render(session: GameSession, client):
                 </div>
                 <div class="transcript-box"><div class="transcript-inner">
                 <div class="transcript-title">Interrogation Transcript</div>
-                {bubbles}
+                {bubbles_html}
                 </div></div>
                 """
-            )
+
+    # Outer sheet -> flush inner box (dossier, alibi, transcript, input all share one border)
+    with st.container(key="paper_outer_suspects"):
+        with st.container(key="paper_inner_flush"):
+            transcript_slot = st.empty()
+            with transcript_slot.container():
+                md(card(bubbles))
 
             with st.form(f"chat_form_{cat.name}", clear_on_submit=True, border=False):
                 inp_col, send_col = st.columns([8, 1], vertical_alignment="center", gap="small")
@@ -120,30 +154,76 @@ def render(session: GameSession, client):
                 )
                 sent = send_col.form_submit_button("↑")
 
+    render_hint_box(session, client, key_prefix="suspect")
+    render_clues_box(session, expanded=False)
+
+    has_chat = any(
+        not m.get("blocked")
+        for hist in session.history.values()
+        for m in hist
+    )
+    st.download_button(
+        label="Export Chat History (.txt)",
+        data=export_chat_history(session),
+        file_name=f"purrder_mystery_case_{session.seed}.txt",
+        mime="text/plain",
+        disabled=not has_chat,
+        key="export_chat_btn",
+        use_container_width=True,
+    )
+
     if sent and question.strip():
         q = question.strip()
-        if looks_like_injection(q):
-            messages.append({"role": "user", "content": q})
-            messages.append({"role": "assistant", "content": SAFE_DEFLECTION})
+        if session.turns >= MAX_TURNS_PER_CASE:
+            messages.append({
+                "role": "assistant",
+                "content": (
+                    "**Response:** The barangay is closing for the night, detective. "
+                    "Time to fill out the Incident Report or start a New Round.\n"
+                    "**Observed Behavior:** *yawns widely and stretches all four paws*"
+                ),
+                "blocked": True,
+            })
             st.rerun()
 
-        clue = pick_clue(session, cat, q)
-        messages.append({"role": "user", "content": q})
+        clean, msg = screen_input(q)
+        if clean is None:
+            messages.append({"role": "user", "content": q, "blocked": True})
+            messages.append({"role": "assistant", "content": msg, "blocked": True})
+            st.rerun()
 
-        with st.spinner(f"{cat.name} is thinking..."):
-            reply = safe_complete(
-                client,
-                prompts.cat_system(session, cat, clue),
-                messages,
-                session.solution,
-                reject=is_stonewall,
+        session.turns += 1
+        clue = pick_clue(session, cat, clean)
+        messages.append({"role": "user", "content": clean})
+        llm_history = [m for m in messages if not m.get("blocked")]
+        tag = new_tag()
+        system = prompts.cat_system(session, cat, clue) + defense_footer(tag)
+
+        # Show the player's bubble right away, plus a typing bubble while the cat "thinks"
+        with transcript_slot.container():
+            md(
+                card(
+                    bubbles
+                    + f'<div class="bubble-user">{esc(clean)}</div>'
+                    + '<div class="bubble-cat bubble-typing"><span></span><span></span><span></span></div>'
+                )
             )
+
+        reply = safe_complete(
+            client,
+            system,
+            build_messages(llm_history, tag),
+            session.solution,
+            max_tokens=220,
+            reject=lambda r: is_stonewall(r) or is_repetitive(r, llm_history),
+        )
 
         if reply is None:
             messages.pop()
-            messages.append({"role": "assistant", "content": SAFE_DEFLECTION})
+            messages.append({"role": "assistant", "content": SAFE_DEFLECTION, "blocked": True})
         else:
             messages.append({"role": "assistant", "content": reply})
-            if clue:
-                session.discovered_clue_ids.add(clue.id)
+            if clue and not is_stonewall(reply):
+                if any(re.search(rf"\b{re.escape(t)}\b", reply, re.I) for t in clue.specific):
+                    session.discovered_clue_ids.add(clue.id)
         st.rerun()
