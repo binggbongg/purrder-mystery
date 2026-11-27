@@ -87,7 +87,8 @@ def test_accusation_scoring():
     s = new_game(ds(), 1)
     sol = s.solution
     ev = evaluate_accusation(s, sol.culprit, sol.weapon, sol.location)
-    assert ev.won and ev.score >= 60
+    assert ev.won and ev.accused == (sol.culprit, sol.weapon, sol.location)
+    assert ev.score is None  # Performance is assigned only when the accusation is submitted.
     wrong = [c.name for c in s.cats if c.name != sol.culprit][0]
     assert not evaluate_accusation(s, wrong, sol.weapon, sol.location).won
     with pytest.raises(ValueError):

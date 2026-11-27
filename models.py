@@ -1,6 +1,8 @@
 import json
+from uuid import uuid4
 from typing import Literal
 from pydantic import BaseModel, Field, model_validator
+from scoring_models import DeliveredHint, Importance, InvestigationTurn, ScoreBreakdown
 
 
 # dataset classes
@@ -57,6 +59,7 @@ class Clue(BaseModel):
     holder: str | None = None            # none = crime-scene clue, known from the start
     specific: list[str]
     generic: list[str]
+    importance: Importance = Field(default="major", frozen=True)
 
 
 class ConfirmedClue(BaseModel):
@@ -93,6 +96,13 @@ class GameSession(BaseModel):
     hints_used: int = 0
     turns: int = 0
     history: dict[str, list[dict]] = Field(default_factory=dict)   # one transcript per suspect
+    id: str = Field(default_factory=lambda: uuid4().hex)
+    investigation: list[InvestigationTurn] = Field(default_factory=list)
+    testimony: dict[str, str] = Field(default_factory=dict)
+    delivered_hints: list[DeliveredHint] = Field(default_factory=list)
+    result: "Evaluation | None" = None
+    scoring_snapshot: dict | None = None
+    investigation_history_complete: bool = True
 
     @model_validator(mode="after")
     def _solution_in_active_sets(self):
@@ -102,6 +112,9 @@ class GameSession(BaseModel):
             raise ValueError("weapon not in active weapons")
         if self.solution.location not in [l.name for l in self.locations]:
             raise ValueError("location not in active locations")
+        clue_ids = [clue.id for clue in self.all_clues()]
+        if "confirmed" in clue_ids or len(clue_ids) != len(set(clue_ids)):
+            raise ValueError("clue IDs must be unique and cannot use the confirmed clue ID")
         return self
 
     def get_cat(self, query: str) -> Cat | None:
@@ -115,13 +128,17 @@ class GameSession(BaseModel):
         return self.scene_clues + [c for cat in self.cats for c in cat.clues]
 
 
-class Evaluation(BaseModel):
+class Evaluation(BaseModel, frozen=True):
     culprit_correct: bool
     weapon_correct: bool
     location_correct: bool
-    score: int
+    score: float | None = None
     found_clues: list[Clue]
     missed_clues: list[Clue]
+    accused: tuple[str, str, str] | None = None
+    score_breakdown: ScoreBreakdown | None = None
+    verdict: str = ""
+    score_status: Literal["pending", "incomplete", "complete"] = "pending"
 
     @property
     def won(self) -> bool:

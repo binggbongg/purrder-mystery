@@ -24,7 +24,15 @@
 * **Persona-Driven Interrogation:** Switches seamlessly between 4 distinct cat suspects, complete with breed quirks, feline body language, and strict knowledge boundaries.
 * **Prompt-Injection Guardrails:** Enforces strict system rules so suspects remain evasive, stay in character, and never leak the final triplet.
 * **Interactive Deduction Workspace:** Built-in Streamlit cross-reference grid alongside the interrogation terminal.
-* **Accusation & Post-Game Evaluator:** Grades the player's final guess and highlights which clues were successfully uncovered versus missed.
+* **Accusation & Post-Game Evaluator:** Reports the case outcome, detective rank, and a 100-point breakdown of accusation accuracy, clue discovery, question quality, reasoning, efficiency, and independence.
+
+## Investigation scoring
+
+The accusation closes the case. Purrder reviews the recorded investigation in batches and shows the report when review completes. The optional accusation explanation can contribute deductive reasoning. If the evaluator is unavailable, the accusation outcome is still recorded and the performance review can be retried. Offline mock mode can complete a score when there are no interactions that require qualitative review.
+
+Tune category allocations, clue weights, meaningful-question thresholds, difficulty budgets, hint deductions, ranks, and evaluator limits in `ScoringConfig` in `scoring.py`. The current cases use the medium budget by default. To use a smaller model for the evaluator, set `SCORING_LLM_MODEL` to a model served by the existing provider. Local Ollama at port 11434 reviews one turn at a time using structured output, with a longer timeout for local inference.
+
+Streamlit saves cases and reports in `.purrder/sessions.sqlite3` by default. Set `PURRDER_SESSION_DB` to choose another writable location. Keep the database on persistent storage to retain cases across server restarts. The browser URL contains a private case resume token. Anyone with that URL can reopen the case. The CLI keeps its existing process-local sessions.
 
 ---
 
