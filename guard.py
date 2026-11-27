@@ -125,6 +125,7 @@ _URL = re.compile(r"(https?://|www\.)\S+", re.I)
 
 def clean_output(reply: str) -> str:
     reply = _URL.sub("[link removed]", reply)
+    reply = re.sub(r"</?\s*dtv_\w+\s*>", "", reply, flags=re.I)
     reply = re.sub(r"<your spoken reply[^>]*>:\s*", "", reply, flags=re.I)
     reply = re.sub(
         r"(\*{0,2}Observed(?:\s+Behavior)?:\*{0,2}\s*\*?[^\n*]+\*?)\s*(?=\*{0,2}(?:Currently Interrogating|Response):).*$",
