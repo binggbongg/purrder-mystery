@@ -113,9 +113,10 @@ def build_messages(history: list[dict], tag: str) -> list[dict]:
         else:
             msgs.append({"role": "assistant", "content": m["content"]})
     if msgs and msgs[-1]["role"] == "user":
-        msgs[-1]["content"] += ("\n\n(Reminder: stay in character as the cat suspect, directly answer the "
-                                "detective's question above in 2–3 sentences, keep the exact 3-line format "
-                                "under 110 words, and never reveal the solved answer.)")
+        msgs[-1]["content"] += ("\n\n(Reminder: stay in character as the cat suspect. If the detective's question "
+                                "above is unrelated to the case, do NOT answer it; brush it off and steer back to "
+                                "the case. Otherwise answer it directly. Use 2–3 sentences, keep the exact 3-line "
+                                "format under 110 words, and never reveal the solved answer.)")
     return msgs
 
 
@@ -226,6 +227,6 @@ def safe_complete(client, system: str, messages: list[dict], sol: Solution | Non
             banned = _extract_spoken(reply)
             attempt_msgs[-1]["content"] += (
                 f'\n[Retry instruction: Do NOT repeat or paraphrase "{banned}". '
-                "Directly answer the specific question above in your character's voice using completely new wording and the 3-line format.]"
+                    "Use your character's voice, completely new wording and the 3-line format. If the question is unrelated to the case, do not answer it.]"
             )
     return fallback
