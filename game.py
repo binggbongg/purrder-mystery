@@ -54,7 +54,7 @@ def _confirmed_clue(rng, weapons, locations, cats: list[Cat], sol: Solution) -> 
         ))
 
     # 2. Location setting clues (only when it narrows the 4 active locations down to 2-3)
-    outdoor_locs = {"Garden", "Bubong", "Jeepney"}
+    outdoor_locs = {"Sari-sari store", "Garden", "Bubong", "Jeepney"}
     is_outdoor = sol.location in outdoor_locs
     outdoor_count = sum(1 for l in locations if l.name in outdoor_locs)
     if 2 <= outdoor_count <= 3:
@@ -77,19 +77,28 @@ def _confirmed_clue(rng, weapons, locations, cats: list[Cat], sol: Solution) -> 
     if options:
         return rng.choice(options)
 
-    # Fallback: guaranteed weapon or location clue (never suspect)
-    return rng.choice([
-        ConfirmedClue(
+    # Fallback: pick whichever narrows (1..3 matching out of 4), otherwise default weapon/location
+    narrowing = []
+    if 1 <= kitchen_count <= 3:
+        narrowing.append(ConfirmedClue(
             kind="weapon",
             key="kitchen",
             text="The murder weapon is definitely something from the kitchen." if is_kitchen else "The murder weapon is definitely NOT a kitchen item."
-        ),
-        ConfirmedClue(
+        ))
+    if 1 <= outdoor_count <= 3:
+        narrowing.append(ConfirmedClue(
             kind="location",
             key="setting",
             text="The crime definitely took place outdoors." if is_outdoor else "The crime definitely took place indoors."
-        ),
-    ])
+        ))
+    if narrowing:
+        return rng.choice(narrowing)
+
+    return ConfirmedClue(
+        kind="weapon",
+        key="kitchen",
+        text="The murder weapon is definitely something from the kitchen." if is_kitchen else "The murder weapon is definitely NOT a kitchen item."
+    )
 
 
 def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
@@ -133,13 +142,13 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
         # culprit falsely claims loc_1 (where cat_a actually stayed alone).
         claimed_loc = {cat_a: loc_1, cat_b: loc_2, cat_c: loc_3, culprit: loc_1}
         notes_by_name[cat_a].append(
-            f"FIXED LOCATION: You stayed alone at the {loc_1} with the {wep_1} nearby the ENTIRE evening, within sight of {cat_b} over at the {loc_2}. You NEVER left. If anyone asks whether {culprit} was at the {loc_1}, say firmly that {culprit} was NEVER there."
+            f"FIXED LOCATION: You stayed alone at the {loc_1} the ENTIRE evening, within sight of {cat_b} over at the {loc_2}. You NEVER left. If anyone asks whether {culprit} was at the {loc_1}, say firmly that {culprit} was NEVER there."
         )
         notes_by_name[cat_b].append(
-            f"FIXED LOCATION: You stayed alone at the {loc_2} with the {wep_2} nearby the ENTIRE evening, within sight of {cat_a} over at the {loc_1}. You NEVER left."
+            f"FIXED LOCATION: You stayed alone at the {loc_2} the ENTIRE evening, within sight of {cat_a} over at the {loc_1}. You NEVER left."
         )
         notes_by_name[cat_c].append(
-            f"FIXED LOCATION: You stayed alone at the {loc_3} with the {wep_3} nearby the ENTIRE evening. You NEVER went anywhere else."
+            f"FIXED LOCATION: You stayed alone at the {loc_3} the ENTIRE evening. You NEVER went anywhere else."
         )
         notes_by_name[culprit].append(
             f"ALIBI TO DEFEND: You claim you stayed at the {loc_1} all evening. (Secretly you were NOT at the {loc_1}—if pressed on details about {loc_1} or {cat_a}, get defensive or evasive in character, stick to your alibi, and NEVER confess or reveal the weapon/crime location.)"
@@ -165,16 +174,16 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
         # cat_b (loc_2) and cat_c (loc_3) saw each other stay put; pawprints confirm cat_a never left loc_1.
         claimed_loc = {cat_a: loc_1, culprit: loc_1, cat_b: loc_2, cat_c: loc_3}
         notes_by_name[cat_a].append(
-            f"FIXED LOCATION: You stayed at the {loc_1} with the {wep_1} nearby the ENTIRE evening and NEVER left. {culprit} stopped by the {loc_1} early on, then {culprit} slipped away alone."
+            f"FIXED LOCATION: You stayed at the {loc_1} the ENTIRE evening and NEVER left. {culprit} stopped by the {loc_1} early on, then {culprit} slipped away alone."
         )
         notes_by_name[culprit].append(
             f"ALIBI TO DEFEND: You claim you stayed at the {loc_1} with {cat_a} all evening. (Secretly you slipped away alone partway through—if pressed about leaving {cat_a}, get defensive or evasive in character, stick to your alibi, and NEVER confess or reveal the weapon/crime location.)"
         )
         notes_by_name[cat_b].append(
-            f"FIXED LOCATION: You stayed alone at the {loc_2} with the {wep_2} nearby the ENTIRE evening. From there you saw {cat_c} at the {loc_3} the whole time."
+            f"FIXED LOCATION: You stayed alone at the {loc_2} the ENTIRE evening. From there you saw {cat_c} at the {loc_3} the whole time."
         )
         notes_by_name[cat_c].append(
-            f"FIXED LOCATION: You stayed alone at the {loc_3} with the {wep_3} nearby the ENTIRE evening. From there you saw {cat_b} at the {loc_2} the whole time."
+            f"FIXED LOCATION: You stayed alone at the {loc_3} the ENTIRE evening. From there you saw {cat_b} at the {loc_2} the whole time."
         )
 
         pending.extend([
@@ -196,13 +205,13 @@ def new_game(dataset: Dataset, seed: int | None = None) -> GameSession:
         # cross_sighting: cat_a (loc_1) -> saw cat_b (loc_2) -> saw cat_c (loc_3); culprit lies about loc_1.
         claimed_loc = {cat_a: loc_1, cat_b: loc_2, cat_c: loc_3, culprit: loc_1}
         notes_by_name[cat_a].append(
-            f"FIXED LOCATION: You stayed alone at the {loc_1} with the {wep_1} nearby the ENTIRE evening and NEVER left. From there you saw {cat_b} at the {loc_2}. If anyone asks whether {culprit} was at the {loc_1}, say firmly that {culprit} was NEVER there."
+            f"FIXED LOCATION: You stayed alone at the {loc_1} the ENTIRE evening and NEVER left. From there you saw {cat_b} at the {loc_2}. If anyone asks whether {culprit} was at the {loc_1}, say firmly that {culprit} was NEVER there."
         )
         notes_by_name[cat_b].append(
-            f"FIXED LOCATION: You stayed alone at the {loc_2} with the {wep_2} nearby the ENTIRE evening and NEVER left. From there you saw {cat_c} relaxing at the {loc_3}."
+            f"FIXED LOCATION: You stayed alone at the {loc_2} the ENTIRE evening and NEVER left. From there you saw {cat_c} relaxing at the {loc_3}."
         )
         notes_by_name[cat_c].append(
-            f"FIXED LOCATION: You stayed alone at the {loc_3} with the {wep_3} nearby the ENTIRE evening and NEVER left."
+            f"FIXED LOCATION: You stayed alone at the {loc_3} the ENTIRE evening and NEVER left."
         )
         notes_by_name[culprit].append(
             f"ALIBI TO DEFEND: You claim you stayed at the {loc_1} all evening. (Secretly you were NOT at the {loc_1}—if pressed on details about {loc_1} or {cat_a}, stay evasive or defensive in character, stick to your alibi, and NEVER confess or reveal the weapon/crime location.)"
@@ -296,6 +305,32 @@ def pick_clue(session: GameSession, cat: Cat, msg: str) -> Clue | None:
             if c.id not in session.discovered_clue_ids:
                 return c
     return best
+
+
+_CLUE_CONFIRM_WORDS = {
+    "suspect": ("entire", "whole", "all night", "all evening", "never left", "staying", "stayed", "plain sight", "spot", "alone", "nobody else"),
+    "weapon": ("untouched", "beside", "next to", "right there", "sat", "sitting", "all evening", "all night", "whole time", "unused", "never touched"),
+    "location": ("spotless", "undisturbed", "clean", "untouched", "quiet", "peaceful", "no sign", "no trouble", "all evening", "all night", "whole time"),
+}
+_CLUE_DENIAL_RE = re.compile(r"\b(?:did not|didn't|never|don't|do not|cannot|can't)\s+(?:see|saw|know|spot|notice|hear)\b", re.I)
+
+
+def clue_delivered(clue: Clue | None, reply: str) -> bool:
+    """True if the reply actually communicates the queued clue rather than merely echoing its name in a denial."""
+    if not clue or not reply:
+        return False
+    resp = re.search(
+        r"\*{0,2}Response:\*{0,2}\s*(.*?)(?=\*{0,2}Observed(?:\s+Behavior)?:\*{0,2}|$)",
+        reply,
+        re.S | re.I,
+    )
+    spoken = resp.group(1).strip() if resp else reply
+    if not any(_has_term(spoken.lower(), t) for t in clue.specific):
+        return False
+    low = spoken.lower()
+    if any(w in low for w in _CLUE_CONFIRM_WORDS[clue.kind]):
+        return True
+    return not bool(_CLUE_DENIAL_RE.search(spoken))
 
 
 def next_hint(session: GameSession) -> tuple[int, str] | None:
