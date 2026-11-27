@@ -121,11 +121,9 @@ def render(session: GameSession, client):
         for m in messages
     )
 
-    # Outer sheet -> flush inner box (dossier, alibi, transcript, input all share one border)
-    with st.container(key="paper_outer_suspects"):
-        with st.container(key="paper_inner_flush"):
-            md(
-                f"""
+    def card(bubbles_html: str) -> str:
+        """Dossier + alibi + transcript markup (rebuilt while waiting for a reply)."""
+        return f"""
                 <div class="dossier-grid">
                 {_mugshot()}
                 <div class="dossier-info">{info_rows}</div>
@@ -136,10 +134,16 @@ def render(session: GameSession, client):
                 </div>
                 <div class="transcript-box"><div class="transcript-inner">
                 <div class="transcript-title">Interrogation Transcript</div>
-                {bubbles}
+                {bubbles_html}
                 </div></div>
                 """
-            )
+
+    # Outer sheet -> flush inner box (dossier, alibi, transcript, input all share one border)
+    with st.container(key="paper_outer_suspects"):
+        with st.container(key="paper_inner_flush"):
+            transcript_slot = st.empty()
+            with transcript_slot.container():
+                md(card(bubbles))
 
             with st.form(f"chat_form_{cat.name}", clear_on_submit=True, border=False):
                 inp_col, send_col = st.columns([8, 1], vertical_alignment="center", gap="small")
@@ -195,15 +199,24 @@ def render(session: GameSession, client):
         tag = new_tag()
         system = prompts.cat_system(session, cat, clue) + defense_footer(tag)
 
-        with st.spinner(f"{cat.name} is thinking..."):
-            reply = safe_complete(
-                client,
-                system,
-                build_messages(llm_history, tag),
-                session.solution,
-                max_tokens=220,
-                reject=lambda r: is_stonewall(r) or is_repetitive(r, llm_history),
+        # Show the player's bubble right away, plus a typing bubble while the cat "thinks"
+        with transcript_slot.container():
+            md(
+                card(
+                    bubbles
+                    + f'<div class="bubble-user">{esc(clean)}</div>'
+                    + '<div class="bubble-cat bubble-typing"><span></span><span></span><span></span></div>'
+                )
             )
+
+        reply = safe_complete(
+            client,
+            system,
+            build_messages(llm_history, tag),
+            session.solution,
+            max_tokens=220,
+            reject=lambda r: is_stonewall(r) or is_repetitive(r, llm_history),
+        )
 
         if reply is None:
             messages.pop()
