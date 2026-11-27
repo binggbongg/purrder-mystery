@@ -688,3 +688,39 @@ div[data-baseweb="popover"] li[aria-selected="true"] {
     border-radius: 14px;
     margin-top: 1rem;
 }
+
+/* ---------- Hint button & cards ---------- */
+[class*="st-key-hint_wrap_"] {
+    margin-top: 0.9rem;
+}
+[class*="st-key-hint_wrap_"] button {
+    background-color: var(--nav-beige);
+    border: 2px solid var(--text-black);
+    border-radius: 10px;
+    padding: 0.45rem 0.9rem;
+}
+[class*="st-key-hint_wrap_"] button p {
+    font-family: var(--font-pixel) !important;
+    font-weight: 600;
+    font-size: 0.98rem;
+    color: var(--text-black) !important;
+}
+[class*="st-key-hint_wrap_"] button:hover:not(:disabled) {
+    background-color: var(--suspect-yellow);
+    border-color: var(--text-black);
+}
+[class*="st-key-hint_wrap_"] button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.hint-card {
+    margin-top: 0.55rem;
+    background-color: var(--paper-offwhite);
+    border: 1.5px solid var(--text-black);
+    border-left: 5px solid var(--coral);
+    border-radius: 8px;
+    padding: 0.65rem 0.9rem;
+    color: var(--text-desc);
+    font-size: 0.96rem;
+    line-height: 1.4;
+}

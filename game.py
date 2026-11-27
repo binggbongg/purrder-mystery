@@ -326,6 +326,35 @@ def _match(value: str, options: list[str], label: str) -> str:
         return hits[0]
     raise ValueError(f"'{value}' is not an active {label}. Options: {', '.join(options)}")
 
+def get_discovered_clues(session: GameSession) -> tuple[list[dict[str, str]], int]:
+    """Return (discovered_clue_items, total_discoverable_clues).
+
+    The first item is always the head-start confirmed clue, followed by every
+    crime-scene and suspect clue whose id is in session.discovered_clue_ids.
+    """
+    items = [{
+        "id": "confirmed",
+        "source": "Confirmed Clue",
+        "kind": session.confirmed_clue.kind,
+        "text": session.confirmed_clue.text,
+    }]
+
+    seen: set[str] = set()
+    total_clues = 0
+    for c in session.all_clues():
+        if c.id in seen:
+            continue
+        seen.add(c.id)
+        total_clues += 1
+        if c.id in session.discovered_clue_ids:
+            items.append({
+                "id": c.id,
+                "source": "Crime scene" if c.holder is None else c.holder,
+                "kind": c.kind,
+                "text": c.scene_text if c.holder is None else c.text,
+            })
+
+    return items, total_clues
 
 def evaluate_accusation(session: GameSession, suspect: str, weapon: str, location: str) -> Evaluation:
     s = _match(suspect, [c.name for c in session.cats], "suspect")

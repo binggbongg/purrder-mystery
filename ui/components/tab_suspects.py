@@ -1,20 +1,21 @@
 import re
-import streamlit as st
-
-import prompts
 from game import pick_clue
 from guard import (
     MAX_TURNS_PER_CASE,
     SAFE_DEFLECTION,
     build_messages,
     defense_footer,
+    is_repetitive,
     is_stonewall,
     new_tag,
     safe_complete,
     screen_input,
 )
+import prompts
+import streamlit as st
 from models import GameSession
-from ui.components._utils import UI_EXTRAS, esc, md
+
+from ui.components._utils import UI_EXTRAS, esc, md, render_clues_box, render_hint_box
 
 HEIGHT_MARKS = ["5'6\"", "", "5'0\"", "", "4'6\"", "", "4'0\"", "", "3'6\"", "", "3'0\"", ""]
 
@@ -29,19 +30,34 @@ def _mugshot(img_html: str = "") -> str:
 
 
 def _format_cat_reply(raw: str) -> str:
-    resp = re.search(r"\*\*Response:\*\*\s*(.*?)(?=\*\*Observed Behavior:\*\*|$)", raw, re.S)
-    beh = re.search(r"\*\*Observed Behavior:\*\*\s*(.*)", raw, re.S)
+    text = re.sub(
+        r"\*{0,2}Currently Interrogating:\*{0,2}\s*[^\n]+\n*",
+        "",
+        raw,
+        flags=re.I,
+    ).strip()
+
+    resp = re.search(
+        r"\*{0,2}Response:\*{0,2}\s*(.*?)(?=\*{0,2}Observed(?:\s+Behavior)?:\*{0,2}|$)",
+        text,
+        re.S | re.I,
+    )
+    beh = re.search(r"\*{0,2}Observed(?:\s+Behavior)?:\*{0,2}\s*(.*)", text, re.S | re.I)
 
     if resp:
         body = esc(resp.group(1).strip().strip('"'))
         body = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", body)
+        body = re.sub(r"\*(.+?)\*", r"<em>\1</em>", body)
         out = f"<div>{body}</div>"
-        if beh:
+        if beh and beh.group(1).strip():
             behavior = esc(beh.group(1).strip().strip("*"))
-            out += f'<div style="margin-top:0.45rem; font-style:italic; font-size:0.88rem; opacity:0.85;">{behavior}</div>'
+            out += (
+                '<div style="margin-top:0.45rem; font-style:italic; '
+                f'font-size:0.88rem; opacity:0.85;">{behavior}</div>'
+            )
         return out
 
-    clean = esc(raw)
+    clean = esc(text)
     clean = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", clean)
     clean = re.sub(r"\*(.+?)\*", r"<em>\1</em>", clean)
     return clean
@@ -130,22 +146,34 @@ def render(session: GameSession, client):
                 )
                 sent = send_col.form_submit_button("↑")
 
+    # Placed OUTSIDE `if sent` so it stays visible at all times
+    render_hint_box(session, client, key_prefix="suspect")
+    render_clues_box(session, expanded=False)
+
     if sent and question.strip():
-        if getattr(session, "turns", 0) >= MAX_TURNS_PER_CASE:
-            st.warning("The barangay is closing for the night, detective. Time to submit your report or start a New Round.")
-            return
+        q = question.strip()
+        if session.turns >= MAX_TURNS_PER_CASE:
+            messages.append({
+                "role": "assistant",
+                "content": (
+                    "**Response:** The barangay is closing for the night, detective. "
+                    "Time to fill out the Incident Report or start a New Round.\n"
+                    "**Observed Behavior:** *yawns widely and stretches all four paws*"
+                ),
+                "blocked": True,
+            })
+            st.rerun()
 
-        clean, msg = screen_input(question.strip())
+        clean, msg = screen_input(q)
         if clean is None:
-            st.warning(msg or SAFE_DEFLECTION)
-            return
+            messages.append({"role": "user", "content": q, "blocked": True})
+            messages.append({"role": "assistant", "content": msg, "blocked": True})
+            st.rerun()
 
-        if hasattr(session, "turns"):
-            session.turns += 1
-
+        session.turns += 1
         clue = pick_clue(session, cat, clean)
         messages.append({"role": "user", "content": clean})
-
+        llm_history = [m for m in messages if not m.get("blocked")]
         tag = new_tag()
         system = prompts.cat_system(session, cat, clue) + defense_footer(tag)
 
@@ -153,16 +181,17 @@ def render(session: GameSession, client):
             reply = safe_complete(
                 client,
                 system,
-                build_messages(messages, tag),
+                build_messages(llm_history, tag),
                 session.solution,
-                reject=is_stonewall,
+                reject=lambda r: is_stonewall(r) or is_repetitive(r, llm_history),
             )
 
         if reply is None:
             messages.pop()
-            st.warning(SAFE_DEFLECTION)
+            messages.append({"role": "assistant", "content": SAFE_DEFLECTION, "blocked": True})
         else:
             messages.append({"role": "assistant", "content": reply})
-            if clue:
-                session.discovered_clue_ids.add(clue.id)
-            st.rerun()
+            if clue and not is_stonewall(reply):
+                if any(re.search(rf"\b{re.escape(t)}\b", reply, re.I) for t in clue.specific):
+                    session.discovered_clue_ids.add(clue.id)
+        st.rerun()
