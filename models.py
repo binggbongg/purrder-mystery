@@ -10,18 +10,21 @@ class Suspect(BaseModel):
     archetype: str
     voice_notes: str
     icon: str
+    image: str = ""
 
 
 class Weapon(BaseModel):
     name: str
     description: str
     icon: str
+    image: str = ""
 
 
 class Location(BaseModel):
     name: str
     description: str
     icon: str
+    image: str = ""
 
 
 class Dataset(BaseModel):

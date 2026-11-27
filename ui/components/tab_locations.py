@@ -8,6 +8,10 @@ def render(session: GameSession):
     entries = []
     for loc in session.locations:
         extras = UI_EXTRAS["locations"].get(loc.name, {"setting": "Indoors"})
-        entries.append((loc.name, loc.description, extras["setting"]))
+        entries.append((
+            loc.name, 
+            loc.description, 
+            extras["setting"],
+            getattr(loc, "image", "")))
 
     render_gallery("Possible Locations", "Location", entries)

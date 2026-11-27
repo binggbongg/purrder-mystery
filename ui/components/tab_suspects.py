@@ -15,7 +15,13 @@ import prompts
 import streamlit as st
 from models import GameSession
 
-from ui.components._utils import UI_EXTRAS, esc, md, render_clues_box, render_hint_box
+from ui.components._utils import (
+    UI_EXTRAS, 
+    esc,
+    img_to_data_uri, 
+    md, 
+    render_clues_box, 
+    render_hint_box)
 
 HEIGHT_MARKS = ["5'6\"", "", "5'0\"", "", "4'6\"", "", "4'0\"", "", "3'6\"", "", "3'0\"", ""]
 
@@ -121,11 +127,18 @@ def render(session: GameSession, client):
         for m in messages
     )
 
+    img_uri = img_to_data_uri(getattr(cat, "image", ""))
+    cat_img_html = (
+        f'<img class="mugshot-img" src="{img_uri}" alt="{esc(cat.name)}" />'
+        if img_uri
+        else ""
+    )
+
     def card(bubbles_html: str) -> str:
         """Dossier + alibi + transcript markup (rebuilt while waiting for a reply)."""
         return f"""
                 <div class="dossier-grid">
-                {_mugshot()}
+                {_mugshot(cat_img_html)}
                 <div class="dossier-info">{info_rows}</div>
                 </div>
                 <div class="alibi-box">

@@ -1,10 +1,14 @@
 """Shared helpers for the Purrder UI components."""
+import base64
 import html
+from pathlib import Path
 
 import streamlit as st
 from game import get_discovered_clues, next_hint
 from guard import safe_complete
 import prompts
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 UI_EXTRAS = {
     "suspects": {
@@ -37,6 +41,18 @@ UI_EXTRAS = {
     },
 }
 
+@st.cache_data
+def img_to_data_uri(relative_path: str) -> str:
+    """Convert a project-relative image path into an inline Base64 data URI."""
+    if not relative_path:
+        return ""
+    full_path = PROJECT_ROOT / relative_path
+    if not full_path.is_file():
+        return ""
+    ext = full_path.suffix.lstrip(".").lower()
+    mime = "jpeg" if ext == "jpg" else ("svg+xml" if ext == "svg" else ext)
+    encoded = base64.b64encode(full_path.read_bytes()).decode("utf-8")
+    return f"data:image/{mime};base64,{encoded}"
 
 def esc(text) -> str:
     """Escape user / data supplied text before putting it inside HTML."""
@@ -124,13 +140,19 @@ def render_hint_box(session, client, key_prefix: str = "suspect") -> None:
             )
 
 
-def render_gallery(title: str, label: str, entries: list[tuple[str, str, str]]) -> None:
-    """Paper sheet with polaroid rows. entries = (name, description, meta_line)."""
+def render_gallery(
+    title: str,
+    label: str,
+    entries: list[tuple[str, str, str, str]],
+) -> None:
+    """Paper sheet with polaroid rows. entries = (name, description, meta_line, image_path)."""
     rows = ""
-    for idx, (name, desc, meta) in enumerate(entries, start=1):
+    for idx, (name, desc, meta, img_path) in enumerate(entries, start=1):
+        img_uri = img_to_data_uri(img_path)
+        img_html = f'<img src="{img_uri}" alt="{esc(name)}" />' if img_uri else ""
         rows += (
             '<div class="item-row">'
-            f'<div class="item-photo">{polaroid(idx)}</div>'
+            f'<div class="item-photo">{polaroid(idx, img_html)}</div>'
             '<div class="item-body">'
             f'<div class="item-title">{esc(label)} {idx}: {esc(name)}</div>'
             f'<p class="desc-text">{esc(desc)}</p>'

@@ -1,30 +1,30 @@
 {
   "suspects": [
-    {"name": "Miming","icon": "suspects/miming.svg","breed": "Calico","archetype": "dramatic gossip","voice_notes": "tsismosa neighborhood-aunt energy, says 'Naku!' and 'Ay grabe!', whispers 'wag mo sabihin kahit kanino ha' before sharing, tail flicks when excited"},
-    {"name": "Whitey","icon": "suspects/whitey.svg","breed": "White puspin","archetype": "pompous aristocrat","voice_notes": "acts like he owns the whole barangay, calls the player 'my dear detective', sniffs 'Hmp' when doubted, grooms his spotless fur when he feels cornered"},
-    {"name": "Choco","icon": "suspects/choco.svg","breed": "Brown tabby","archetype": "nervous and chatty","voice_notes": "over-explains, stammers 'ah, eh, kasi...', babbles when worried, kneads the air when anxious"},
-    {"name": "Blackie","icon": "suspects/blackie.svg","breed": "Black puspin", "archetype": "cold and mysterious", "voice_notes": "short sentences, often answers a question with a question, stares without blinking, only drops a Tagalog word when it matters"},
-    {"name": "Pandesal","icon": "suspects/pandesal.svg","breed": "Cream Persian-mix","archetype": "sweet but forgetful","voice_notes": "warm and friendly, calls the player 'ate' or 'kuya', purrs mid-sentence, loses their train of thought, gets distracted by anything that smells like bread"},
-    {"name": "Tigre","icon": "suspects/tigre.svg","breed": "Orange puspin","archetype": "grumpy veteran", "voice_notes": "blunt barangay-tanod energy, patrols the alley, complains about everything, hisses at the word 'ligo' (bath)"}
+    {"name": "Miming","image": "ui/assets/icons/suspects/1_Calico_Chismosa.PNG","icon": "suspects/miming.svg","breed": "Calico","archetype": "dramatic gossip","voice_notes": "tsismosa neighborhood-aunt energy, says 'Naku!' and 'Ay grabe!', whispers 'wag mo sabihin kahit kanino ha' before sharing, tail flicks when excited"},
+    {"name": "Whitey","image": "ui/assets/icons/suspects/2_white_aristocrats.PNG","icon": "suspects/whitey.svg","breed": "White puspin","archetype": "pompous aristocrat","voice_notes": "acts like he owns the whole barangay, calls the player 'my dear detective', sniffs 'Hmp' when doubted, grooms his spotless fur when he feels cornered"},
+    {"name": "Choco","image": "ui/assets/icons/suspects/3_brown_anxious.PNG","icon": "suspects/choco.svg","breed": "Brown tabby","archetype": "nervous and chatty","voice_notes": "over-explains, stammers 'ah, eh, kasi...', babbles when worried, kneads the air when anxious"},
+    {"name": "Blackie","image": "ui/assets/icons/suspects/4_black_mysterious.PNG","icon": "suspects/blackie.svg","breed": "Black puspin", "archetype": "cold and mysterious", "voice_notes": "short sentences, often answers a question with a question, stares without blinking, only drops a Tagalog word when it matters"},
+    {"name": "Pandesal","image": "ui/assets/icons/suspects/5_cream_ate.PNG","icon": "suspects/pandesal.svg","breed": "Cream Persian-mix","archetype": "sweet but forgetful","voice_notes": "warm and friendly, calls the player 'ate' or 'kuya', purrs mid-sentence, loses their train of thought, gets distracted by anything that smells like bread"},
+    {"name": "Tigre","image": "ui/assets/icons/suspects/6_Orange_grumpy.PNG","icon": "suspects/tigre.svg","breed": "Orange puspin","archetype": "grumpy veteran", "voice_notes": "blunt barangay-tanod energy, patrols the alley, complains about everything, hisses at the word 'ligo' (bath)"}
   ],
   "weapons": [
-    {"name": "Tsinelas","icon": "🩴","description": "A rubber slipper, flung with unmatched mom-level accuracy"},
-    {"name": "Walis tambo","icon": "🧹","description": "A soft broom with a few bristles missing"},
-    {"name": "Kawali","icon": "🍳","description": "A heavy frying pan, still warm"},
-    {"name": "Sandok","icon": "🥄","description": "A wooden ladle with a suspicious dent"},
-    {"name": "Paypay","icon": "🪭","description": "A woven hand fan, torn at one edge"},
-    {"name": "Kandila","icon": "🕯️","description": "A candle stub, still smelling of smoke"},
-    {"name": "Laser pointer","icon": "🔦","description": "Its little red dot is still blinking"},
-    {"name": "Scratching post","icon": "🪵","description": "Shredded down one side"}
+    {"name": "Tsinelas","image": "ui/assets/icons/weapons/Tsinelas.PNG","icon": "🩴","description": "A rubber slipper, flung with unmatched mom-level accuracy"},
+    {"name": "Walis tambo","image": "ui/assets/icons/weapons/Walis_Tambo.PNG","icon": "🧹","description": "A soft broom with a few bristles missing"},
+    {"name": "Kawali","image": "ui/assets/icons/weapons/Kawali.PNG","icon": "🍳","description": "A heavy frying pan, still warm"},
+    {"name": "Sandok","image": "ui/assets/icons/weapons/Sandok.PNG","icon": "🥄","description": "A wooden ladle with a suspicious dent"},
+    {"name": "Paypay","image": "ui/assets/icons/weapons/Paypay.PNG","icon": "🪭","description": "A woven hand fan, torn at one edge"},
+    {"name": "Kandila","image": "ui/assets/icons/weapons/Kandila.PNG","icon": "🕯️","description": "A candle stub, still smelling of smoke"},
+    {"name": "Laser pointer","image": "ui/assets/icons/weapons/Laser_Pointer.PNG","icon": "🔦","description": "Its little red dot is still blinking"},
+    {"name": "Scratching post","image": "ui/assets/icons/weapons/Scratching_Post.PNG","icon": "🪵","description": "Shredded down one side"}
   ],
   "locations": [
-    {"name": "Sari-sari store","icon": "🏪","description": "Shelves of candy and canned goods, with a cat-sized gap on the counter"},
-    {"name": "Kusina","icon": "🍽️","description": "The kitchen, smelling of garlic rice and burnt toast"},
-    {"name": "Garden","icon": "🌺","description": "Moonlit, with muddy paw prints"},
-    {"name": "Bubong","icon": "🏘️","description": "The rooftop, warm tin and a view of the whole street"},
-    {"name": "Sala","icon": "🛋️","description": "A living room where the sofa is still covered in plastic"},
-    {"name": "Jeepney","icon": "🚍","description": "Red with yellow trim, chipped paint, has been tambay for a year"},
-    {"name": "Cat tree","icon": "🌳","description": "Three tiers, one carpeted perch scratched bare"},
-    {"name": "Sunny windowsill","icon": "🪟","description": "The best seat in the house"}
+    {"name": "Sari-sari store","image": "ui/assets/icons/locations/sari-sari.png","icon": "🏪","description": "Shelves of candy and canned goods, with a cat-sized gap on the counter"},
+    {"name": "Kusina","image": "ui/assets/icons/locations/kusina.png","icon": "🍽️","description": "The kitchen, smelling of garlic rice and burnt toast"},
+    {"name": "Garden","image": "ui/assets/icons/locations/garden.png","icon": "🌺","description": "Moonlit, with muddy paw prints"},
+    {"name": "Bubong","image": "ui/assets/icons/locations/bubong.png","icon": "🏘️","description": "The rooftop, warm tin and a view of the whole street"},
+    {"name": "Sala","image": "ui/assets/icons/locations/living-room.png","icon": "🛋️","description": "A living room where the sofa is still covered in plastic"},
+    {"name": "Jeepney","image": "ui/assets/icons/locations/jeepney.png","icon": "🚍","description": "Red with yellow trim, chipped paint, has been tambay for a year"},
+    {"name": "Cat tree","image": "ui/assets/icons/locations/cat-tower.png","icon": "🌳","description": "Three tiers, one carpeted perch scratched bare"},
+    {"name": "Sunny windowsill","image": "ui/assets/icons/locations/window-sill.png","icon": "🪟","description": "The best seat in the house"}
   ]
 }
