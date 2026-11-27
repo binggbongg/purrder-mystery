@@ -356,6 +356,35 @@ def get_discovered_clues(session: GameSession) -> tuple[list[dict[str, str]], in
 
     return items, total_clues
 
+def export_chat_history(session: GameSession) -> str:
+    """Format all suspect interrogation transcripts from the current round as readable text."""
+    lines = [
+        "PURRDER MYSTERY — INTERROGATION TRANSCRIPT",
+        f"Case Seed: {session.seed}",
+        f"Victim: {session.victim}",
+        "=" * 55,
+        "",
+    ]
+    for cat in session.cats:
+        msgs = [m for m in session.history.get(cat.name, []) if not m.get("blocked")]
+        lines.append(f"## {cat.name} ({cat.archetype} / {cat.breed})")
+        lines.append(f"Alibi: {cat.alibi}")
+        lines.append("-" * 40)
+        if not msgs:
+            lines.append("(No questions asked)")
+        else:
+            for m in msgs:
+                if m["role"] == "user":
+                    lines.append(f"Detective: {m['content']}")
+                else:
+                    cleaned = re.sub(r"^\*{0,2}Currently Interrogating:\*{0,2}\s*[^\n]+\n*", "", m["content"], flags=re.I)
+                    cleaned = re.sub(r"\*{0,2}Response:\*{0,2}\s*", "", cleaned, flags=re.I)
+                    cleaned = re.sub(r"\*{0,2}Observed(?:\s+Behavior)?:\*{0,2}\s*", "Behavior: ", cleaned, flags=re.I)
+                    lines.append(f"{cat.name}: {cleaned.strip()}")
+                lines.append("")
+        lines.append("")
+    return "\n".join(lines).strip() + "\n"
+
 def evaluate_accusation(session: GameSession, suspect: str, weapon: str, location: str) -> Evaluation:
     s = _match(suspect, [c.name for c in session.cats], "suspect")
     w = _match(weapon, [x.name for x in session.weapons], "weapon")

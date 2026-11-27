@@ -1,5 +1,5 @@
 import re
-from game import pick_clue
+from game import export_chat_history, pick_clue
 from guard import (
     MAX_TURNS_PER_CASE,
     SAFE_DEFLECTION,
@@ -152,6 +152,21 @@ def render(session: GameSession, client):
 
     render_hint_box(session, client, key_prefix="suspect")
     render_clues_box(session, expanded=False)
+
+    has_chat = any(
+        not m.get("blocked")
+        for hist in session.history.values()
+        for m in hist
+    )
+    st.download_button(
+        label="Export Chat History (.txt)",
+        data=export_chat_history(session),
+        file_name=f"purrder_mystery_case_{session.seed}.txt",
+        mime="text/plain",
+        disabled=not has_chat,
+        key="export_chat_btn",
+        use_container_width=True,
+    )
 
     if sent and question.strip():
         q = question.strip()

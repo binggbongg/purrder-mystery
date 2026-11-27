@@ -76,7 +76,7 @@ def render_clues_box(session, expanded: bool = False) -> None:
     """Collapsible notebook listing the confirmed clue + all uncovered scene/suspect clues."""
     items, total = get_discovered_clues(session)
     found_count = len(items) - 1  # exclude the head-start confirmed clue from x/9 count
-    with st.expander(f"🔎 Uncovered Clues ({found_count}/{total} found)", expanded=expanded):
+    with st.expander(f"Uncovered Clues ({found_count}/{total} found)", expanded=expanded):
         rows = []
         for item in items:
             is_conf = item["id"] == "confirmed"
@@ -98,9 +98,9 @@ def render_hint_box(session, client, key_prefix: str = "suspect") -> None:
         st.session_state[hint_key] = []
     remaining = max(0, 3 - session.hints_used)
     label = (
-        f"💡 Ask Mr. Meowslock for a Hint ({remaining}/3 left)"
+        f"Ask Mr. Meowslock for a Hint ({remaining}/3 left)"
         if remaining > 0
-        else "💡 No Hints Remaining (0/3)"
+        else "No Hints Remaining (0/3)"
     )
     with st.container(key=f"hint_wrap_{key_prefix}"):
         if st.button(label, disabled=remaining == 0, key=f"{key_prefix}_hint_btn", use_container_width=True):
